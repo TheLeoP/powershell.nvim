@@ -104,4 +104,4 @@ You could also use a filetype autocmd to create the keymap.
 
 ## TODO
 
-- [ ] Online help for symbol under cursor
+- [ ] Tests
