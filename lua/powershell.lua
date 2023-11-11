@@ -357,14 +357,15 @@ end
 
 M.eval = function()
   local buf = vim.api.nvim_get_current_buf()
-  local client = clients[buf]
-  if not client then
+  local client_id = clients[buf]
+  if not client_id then
     vim.notify(
       "Currently, there is no LSP client initialize by powershell.nvim attached to the current buffer.",
       vim.log.levels.WARN
     )
     return
   end
+  local client = vim.lsp.get_client_by_id(client_id)
 
   local mode = vim.api.nvim_get_mode().mode
   ---@type string
@@ -382,7 +383,7 @@ M.eval = function()
     text = table.concat(vim.api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {}), "\n")
   end
 
-  vim.lsp.buf_request_all(0, "evaluate", { expression = text }, function() end)
+  client.request("evaluate", { expression = text }, function() end, 0)
 end
 
 return M
