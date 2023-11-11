@@ -329,6 +329,9 @@ M.toggle_term = function()
   end
 end
 
+---@type table<integer, integer>
+local clients = {}
+
 M.initialize_or_attach = function()
   if not term_buf then
     term_buf = vim.api.nvim_create_buf(true, true)
@@ -342,11 +345,44 @@ M.initialize_or_attach = function()
     if session_details then
       M._session_details = session_details
       local lsp_config = get_lsp_config()
-      if lsp_config then vim.lsp.start(lsp_config) end
+      if lsp_config then
+        local buf = vim.api.nvim_get_current_buf()
+        clients[buf] = vim.lsp.start(lsp_config)
+      end
     else
       vim.notify(error_msg, vim.log.levels.ERROR)
     end
   end)
+end
+
+M.eval = function()
+  local buf = vim.api.nvim_get_current_buf()
+  local client = clients[buf]
+  if not client then
+    vim.notify(
+      "Currently, there is no LSP client initialize by powershell.nvim attached to the current buffer.",
+      vim.log.levels.WARN
+    )
+    return
+  end
+
+  local mode = vim.api.nvim_get_mode().mode
+  ---@type string
+  local text
+  if mode == "n" then
+    text = vim.api.nvim_get_current_line()
+  elseif mode == "v" or mode == "V" or mode == "\22" then
+    vim.cmd.normal { args = { "\27" }, bang = true }
+
+    local start_row = vim.fn.line "'<" - 1
+    local start_col = vim.fn.col "'<" - 1
+    local end_row = vim.fn.line "'>" - 1
+    local end_col = vim.fn.col "'>"
+
+    text = table.concat(vim.api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {}), "\n")
+  end
+
+  vim.lsp.buf_request_all(0, "evaluate", { expression = text }, function() end)
 end
 
 return M
