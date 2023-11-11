@@ -6,7 +6,7 @@ local default_config = {
   on_attach = function() end,
   capabilities = vim.lsp.protocol.make_client_capabilities(),
   bundle_path = "",
-  init_options = {},
+  init_options = vim.empty_dict(),
   settings = vim.empty_dict(),
   shell = "pwsh",
 }
@@ -99,6 +99,43 @@ M.config = default_config
 ---@param args powershell.config?
 M.setup = function(args)
   if args then M.config = vim.tbl_deep_extend("force", M.config, args) end
+
+  local ok, dap = pcall(require, "dap")
+  if ok then
+    dap.adapters.powershell = function(callback)
+      callback {
+        type = "pipe",
+        pipe = M._session_details.debugServicePipeName,
+      }
+    end
+    dap.configurations.ps1 = {
+      {
+        name = "PowerShell: Launch Current File",
+        type = "powershell",
+        request = "launch",
+        script = "${file}",
+      },
+      {
+        name = "PowerShell: Attach to PowerShell Host Process",
+        type = "powershell",
+        request = "attach",
+        runspaceId = 1,
+      },
+      {
+        name = "PowerShell: Run Pester Tests",
+        type = "powershell",
+        request = "launch",
+        script = "Invoke-Pester",
+        createTemporaryIntegratedConsole = true,
+        attachDotnetDebugger = true,
+      },
+      {
+        name = "PowerShell: Interactive Session",
+        type = "powershell",
+        request = "launch",
+      },
+    }
+  end
 end
 
 local temp_path = vim.fn.stdpath "cache"
@@ -119,7 +156,7 @@ local function make_cmd(bundle_path, shell)
     "-HostVersion", "1.0.0",
     "-LogPath", ("%s/powershell_es.log"):format(temp_path),
     -- TODO: make this configurable
-    "-LogLevel", "Diagnostic",
+    "-LogLevel", "Normal",
     "-BundledModulesPath", ("%s"):format(bundle_path),
     "-EnableConsoleRepl",
     "-SessionDetailsPath", session_file_path,
