@@ -360,7 +360,7 @@ M.eval = function()
   local client_id = clients[buf]
   if not client_id then
     vim.notify(
-      "Currently, there is no LSP client initialize by powershell.nvim attached to the current buffer.",
+      "There is no LSP client initialized by powershell.nvim attached to the current buffer.",
       vim.log.levels.WARN
     )
     return
