@@ -355,6 +355,7 @@ M.initialize_or_attach = function()
   end)
 end
 
+local noop = function() end
 M.eval = function()
   local buf = vim.api.nvim_get_current_buf()
   local client_id = clients[buf]
@@ -383,7 +384,7 @@ M.eval = function()
     text = table.concat(vim.api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {}), "\n")
   end
 
-  client.request("evaluate", { expression = text }, function() end, 0)
+  client.request("evaluate", { expression = text }, noop, 0)
 end
 
 return M
