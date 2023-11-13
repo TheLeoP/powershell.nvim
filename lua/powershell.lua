@@ -168,14 +168,14 @@ end
 ---@return powershell.lsp_config|nil
 local function get_lsp_config()
   if not M.config.bundle_path then
-    vim.notify("Powershell.nvim: Error", vim.log.levels.ERROR)
+    vim.notify("Powershell.nvim: there is no value configured for `bundle_path`.", vim.log.levels.ERROR)
     return
   end
 
   ---@type powershell.lsp_config
   local lsp_config = {
     name = "powershell_es",
-    cmd = M.domain_socket_connect(M._session_details.languageServicePipeName),
+    cmd = vim.lsp.rpc.domain_socket_connect(M._session_details.languageServicePipeName),
     capabilities = M.config.capabilities or default_config.capabilities,
     on_attach = M.config.on_attach or default_config.on_attach,
     settings = M.config.settings or default_config.settings,
@@ -202,14 +202,21 @@ local function wait_for_session_file(file_path, callback)
   ---@param delay_miliseconds integer
   local function inner_try_func(remaining_tries, delay_miliseconds)
     if remaining_tries == 0 then
-      -- TODO: error
-      vim.notify("error", vim.log.levels.ERROR)
+      vim.notify(
+        ("Powershell.nvim: the session file on path `%s` could not be found."):format(file_path),
+        vim.log.levels.ERROR
+      )
     elseif not (vim.fn.filereadable(file_path) == 1) then
       vim.defer_fn(function() inner_try_func(remaining_tries - 1, delay_miliseconds) end, delay_miliseconds)
     else
       local f, error_msg = io.open(file_path)
       if not f then
-        vim.notify(error_msg or "Error", vim.log.levels.ERROR)
+        vim.notify(
+          ("Powershell.nvim: %s"):format(
+            error_msg or ("the session file on path `%s` could not be read."):format(file_path)
+          ),
+          vim.log.levels.ERROR
+        )
         return
       end
       local session_file = vim.json.decode(f:read "*a")
@@ -242,9 +249,12 @@ M._session_details = nil
 function M.domain_socket_connect(pipe_path)
   return function(dispatchers)
     dispatchers = pipes.merge_dispatchers(dispatchers)
-    local pipe = uv.new_pipe(false)
+    local pipe, err_name, err_message = uv.new_pipe(false)
     if not pipe then
-      vim.notify("Error", vim.log.levels.ERROR)
+      vim.notify(
+        ("Powershell.nvim: error %s, %s"):format(vim.inspect(err_name), vim.inspect(err_message)),
+        vim.log.levels.ERROR
+      )
       return
     end
     local closing = false
@@ -309,7 +319,7 @@ M.open_term = function()
     vim.api.nvim_set_current_buf(term_buf)
     term_win = vim.api.nvim_get_current_win()
   else
-    vim.notify("Error", vim.log.levels.ERROR)
+    vim.notify("Powershell.nvim: there is no terminal buffer", vim.log.levels.ERROR)
   end
 end
 
@@ -317,7 +327,7 @@ M.close_term = function()
   if term_win then
     vim.api.nvim_win_close(term_win, true)
   else
-    vim.notify("Error", vim.log.levels.ERROR)
+    vim.notify("Powershell.nvim: there is no terminal window", vim.log.levels.ERROR)
   end
 end
 
