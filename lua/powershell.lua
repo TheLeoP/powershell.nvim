@@ -175,7 +175,7 @@ local function get_lsp_config()
   ---@type powershell.lsp_config
   local lsp_config = {
     name = "powershell_es",
-    cmd = vim.lsp.rpc.domain_socket_connect(M._session_details.languageServicePipeName),
+    cmd = M.domain_socket_connect(M._session_details.languageServicePipeName),
     capabilities = M.config.capabilities or default_config.capabilities,
     on_attach = M.config.on_attach or default_config.on_attach,
     settings = M.config.settings or default_config.settings,
@@ -297,33 +297,67 @@ function M.domain_socket_connect(pipe_path)
   end
 end
 
----@type integer?
-local term_buf
----@type integer?
-local term_win
+--- client id -> term_buf
+---@type table<integer, integer>
+local term_bufs = {}
+--- client id -> term_win
+---@type table<integer, integer>
+local term_wins = {}
+
+--- bufnr -> client id
+---@type table<integer, integer>
+local clients = {}
+
+---@return integer term_win for current buf
+M.term_win = function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local client = clients[bufnr]
+  local term_win = term_wins[client]
+  return term_win
+end
+
+---@return integer|nil term_buf for current buf
+M.term_buf = function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  -- TODO: check before accessing
+  local client = clients[bufnr]
+  local term_buf = term_bufs[client]
+  return term_buf
+end
 
 --- @return boolean
-M.is_open_term = function()
+M.is_term_open = function()
+  local term_win = M.term_win()
   if not term_win then return false end
 
   local win_type = vim.fn.win_gettype(term_win)
+
   -- empty string window type corresponds to a normal window
   local win_open = win_type == "" or win_type == "popup"
-  return win_open and vim.api.nvim_win_get_buf(term_win) == term_buf
+  return win_open and vim.api.nvim_win_get_buf(term_win) == M.term_buf()
 end
 
 M.open_term = function()
-  if term_buf then
+  local term_bufnr = M.term_buf()
+  if term_bufnr then
+    local bufnr = vim.api.nvim_get_current_buf()
+    local client = clients[bufnr]
+
     --TODO: make this configurable
     vim.cmd.split()
-    vim.api.nvim_set_current_buf(term_buf)
-    term_win = vim.api.nvim_get_current_win()
+    vim.api.nvim_set_current_buf(term_bufnr)
+    local term_win = vim.api.nvim_get_current_win()
+    term_wins[client] = term_win
+
+    -- To toggle when inside terminal window
+    if not clients[term_bufnr] then clients[term_bufnr] = client end
   else
     vim.notify("Powershell.nvim: there is no terminal buffer", vim.log.levels.ERROR)
   end
 end
 
 M.close_term = function()
+  local term_win = M.term_win()
   if term_win then
     vim.api.nvim_win_close(term_win, true)
   else
@@ -332,17 +366,15 @@ M.close_term = function()
 end
 
 M.toggle_term = function()
-  if M.is_open_term() then
+  if M.is_term_open() then
     M.close_term()
   else
     M.open_term()
   end
 end
 
----@type table<integer, integer>
-local clients = {}
-
 M.initialize_or_attach = function()
+  local term_buf = M.term_buf()
   if not term_buf then
     term_buf = vim.api.nvim_create_buf(true, true)
     vim.api.nvim_buf_call(term_buf, function()
@@ -351,13 +383,17 @@ M.initialize_or_attach = function()
     end)
   end
 
+  local buf = vim.api.nvim_get_current_buf()
   wait_for_session_file(session_file_path, function(session_details, error_msg)
     if session_details then
       M._session_details = session_details
       local lsp_config = get_lsp_config()
       if lsp_config then
-        local buf = vim.api.nvim_get_current_buf()
-        clients[buf] = vim.lsp.start(lsp_config)
+        local client = vim.lsp.start(lsp_config)
+        if client then
+          clients[buf] = client
+          term_bufs[client] = term_buf
+        end
       end
     else
       vim.notify(error_msg, vim.log.levels.ERROR)

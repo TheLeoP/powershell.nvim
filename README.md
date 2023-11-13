@@ -104,5 +104,4 @@ You could also use a filetype autocmd to create the keymap.
 
 ## TODO
 
-- [ ] One terminal per language server instance
 - [ ] Tests
