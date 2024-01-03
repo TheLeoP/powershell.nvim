@@ -1,5 +1,4 @@
 local uv = vim.loop
-local pipes = require "powershell.pipe"
 
 ---@class powershell.config
 local default_config = {
@@ -175,7 +174,7 @@ local function get_lsp_config()
   ---@type powershell.lsp_config
   local lsp_config = {
     name = "powershell_es",
-    cmd = M.domain_socket_connect(M._session_details.languageServicePipeName),
+    cmd = vim.lsp.rpc.domain_socket_connect(M._session_details.languageServicePipeName),
     capabilities = M.config.capabilities or default_config.capabilities,
     on_attach = M.config.on_attach or default_config.on_attach,
     settings = M.config.settings or default_config.settings,
@@ -243,59 +242,6 @@ M._session_details = nil
 ---@field notify fun(method: string, params: any)
 ---@field is_closing function
 ---@field terminate function
-
----@param pipe_path  string
----@return fun(dispatchers: powershell.lsp.dispatchers): powershell.lsp.start_server?
-function M.domain_socket_connect(pipe_path)
-  return function(dispatchers)
-    dispatchers = pipes.merge_dispatchers(dispatchers)
-    local pipe, err_name, err_message = uv.new_pipe(false)
-    if not pipe then
-      vim.notify(
-        ("Powershell.nvim: error %s, %s"):format(vim.inspect(err_name), vim.inspect(err_message)),
-        vim.log.levels.ERROR
-      )
-      return
-    end
-    local closing = false
-    local transport = {
-      write = vim.schedule_wrap(function(msg) pipe:write(msg) end),
-      is_closing = function() return closing end,
-      terminate = function()
-        if not closing then
-          closing = true
-          pipe:shutdown()
-          pipe:close()
-          dispatchers.on_exit(0, 0)
-        end
-      end,
-    }
-    local client = pipes.new_client(dispatchers, transport)
-    pipe:connect(pipe_path, function(err)
-      if err then
-        vim.schedule(
-          function()
-            vim.notify(
-              string.format("Could not connect to :%s, reason: %s", pipe_path, vim.inspect(err)),
-              vim.log.levels.WARN
-            )
-          end
-        )
-        return
-      end
-      local handle_body = function(body) client:handle_body(body) end
-      pipe:read_start(
-        pipes.create_read_loop(
-          handle_body,
-          transport.terminate,
-          function(read_err) client:on_error(pipes.client_errors.READ_ERROR, read_err) end
-        )
-      )
-    end)
-
-    return pipes.public_client(client)
-  end
-end
 
 --- client id -> term_buf
 ---@type table<integer, integer>
