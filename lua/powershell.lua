@@ -234,6 +234,7 @@ local function wait_for_session_file(file_path, callback)
   inner_try_func(60, 2000)
 end
 
+--TODO: session details per client_id
 ---@type powershell.session_details|nil
 M._session_details = nil
 
@@ -345,12 +346,14 @@ M.initialize_or_attach = function()
       M._session_details = session_details
       local lsp_config = get_lsp_config()
       if lsp_config then
-        local client = vim.lsp.start(lsp_config)
-        if client then
-          clients[buf] = client
-          term_bufs[client] = term_buf
-          term_channels[client] = term_channel
-        end
+        api.nvim_buf_call(buf, function()
+          local client = vim.lsp.start(lsp_config)
+          if client then
+            clients[buf] = client
+            term_bufs[client] = term_buf
+            term_channels[client] = term_channel
+          end
+        end)
       end
     else
       vim.notify(error_msg, vim.log.levels.ERROR)
@@ -358,7 +361,7 @@ M.initialize_or_attach = function()
   end)
 end
 
-local noop = function() end
+-- local noop = function() end
 M.eval = function()
   local buf = api.nvim_get_current_buf()
   local client_id = clients[buf]
