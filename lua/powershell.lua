@@ -1,12 +1,16 @@
-local uv = vim.loop
-
 ---@class powershell.config
+---@field bundle_path string
+---@field init_options table<string, any>
+---@field settings powershell.lsp_settings
+---@field capabilities lsp.ClientCapabilities
+---@field on_attach? function
+
+---@type powershell.config
 local default_config = {
-  on_attach = function() end,
   capabilities = vim.lsp.protocol.make_client_capabilities(),
   bundle_path = "",
-  init_options = vim.empty_dict(),
-  settings = vim.empty_dict(),
+  init_options = vim.empty_dict() --[[@as table]],
+  settings = vim.empty_dict() --[[@as table]],
   shell = "pwsh",
 }
 
@@ -79,15 +83,15 @@ local default_config = {
 ---@field bugReporting powershell.BugReportingSettings?
 
 ---@class powershell.lsp_config
----@field cmd string[]
+---@field cmd string[]|fun(dispatchers: vim.lsp.rpc.Dispatchers):vim.lsp.rpc.PublicClient
 ---@field capabilities table
----@field handlers table<string, function>?
+---@field handlers? table<string, function>
 ---@field settings powershell.lsp_settings
----@field commands table<string, function>?
+---@field commands? table<string, function>
 ---@field init_options table<string, any>
 ---@field name string
----@field on_attach function?
----@field root_dir string
+---@field on_attach? function
+---@field root_dir? string?
 
 ---@class powershell
 local M = {}
