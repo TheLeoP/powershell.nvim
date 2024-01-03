@@ -1,3 +1,6 @@
+local fs = vim.fs
+local api = vim.api
+
 ---@class powershell.config
 ---@field bundle_path string
 ---@field init_options table<string, any>
@@ -183,9 +186,7 @@ local function get_lsp_config()
     on_attach = M.config.on_attach or default_config.on_attach,
     settings = M.config.settings or default_config.settings,
     init_options = M.config.init_options or default_config.init_options,
-    root_dir = vim.fs.dirname(
-      vim.fs.find({ ".git" }, { upward = true, path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)) })[1]
-    ),
+    root_dir = fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(0)) })[1]),
   }
   return lsp_config
 end
@@ -260,7 +261,7 @@ local clients = {}
 
 ---@return integer term_win for current buf
 M.term_win = function()
-  local bufnr = vim.api.nvim_get_current_buf()
+  local bufnr = api.nvim_get_current_buf()
   local client = clients[bufnr]
   local term_win = term_wins[client]
   return term_win
@@ -268,7 +269,7 @@ end
 
 ---@return integer|nil term_buf for current buf
 M.term_buf = function()
-  local bufnr = vim.api.nvim_get_current_buf()
+  local bufnr = api.nvim_get_current_buf()
   -- TODO: check before accessing
   local client = clients[bufnr]
   local term_buf = term_bufs[client]
@@ -284,19 +285,19 @@ M.is_term_open = function()
 
   -- empty string window type corresponds to a normal window
   local win_open = win_type == "" or win_type == "popup"
-  return win_open and vim.api.nvim_win_get_buf(term_win) == M.term_buf()
+  return win_open and api.nvim_win_get_buf(term_win) == M.term_buf()
 end
 
 M.open_term = function()
   local term_bufnr = M.term_buf()
   if term_bufnr then
-    local bufnr = vim.api.nvim_get_current_buf()
+    local bufnr = api.nvim_get_current_buf()
     local client = clients[bufnr]
 
     --TODO: make this configurable
     vim.cmd.split()
-    vim.api.nvim_set_current_buf(term_bufnr)
-    local term_win = vim.api.nvim_get_current_win()
+    api.nvim_set_current_buf(term_bufnr)
+    local term_win = api.nvim_get_current_win()
     term_wins[client] = term_win
 
     -- To toggle when inside terminal window
@@ -309,7 +310,7 @@ end
 M.close_term = function()
   local term_win = M.term_win()
   if term_win then
-    vim.api.nvim_win_close(term_win, true)
+    api.nvim_win_close(term_win, true)
   else
     vim.notify("Powershell.nvim: there is no terminal window", vim.log.levels.ERROR)
   end
@@ -326,14 +327,14 @@ end
 M.initialize_or_attach = function()
   local term_buf = M.term_buf()
   if not term_buf then
-    term_buf = vim.api.nvim_create_buf(true, true)
-    vim.api.nvim_buf_call(term_buf, function()
+    term_buf = api.nvim_create_buf(true, true)
+    api.nvim_buf_call(term_buf, function()
       local cmd = make_cmd(M.config.bundle_path, M.config.shell)
       vim.fn.termopen(cmd)
     end)
   end
 
-  local buf = vim.api.nvim_get_current_buf()
+  local buf = api.nvim_get_current_buf()
   wait_for_session_file(session_file_path, function(session_details, error_msg)
     if session_details then
       M._session_details = session_details
@@ -353,7 +354,7 @@ end
 
 local noop = function() end
 M.eval = function()
-  local buf = vim.api.nvim_get_current_buf()
+  local buf = api.nvim_get_current_buf()
   local client_id = clients[buf]
   if not client_id then
     vim.notify(
@@ -364,11 +365,11 @@ M.eval = function()
   end
   local client = vim.lsp.get_client_by_id(client_id)
 
-  local mode = vim.api.nvim_get_mode().mode
+  local mode = api.nvim_get_mode().mode
   ---@type string
   local text
   if mode == "n" then
-    text = vim.api.nvim_get_current_line()
+    text = api.nvim_get_current_line()
   elseif mode == "v" or mode == "V" or mode == "\22" then
     vim.cmd.normal { args = { "\27" }, bang = true }
 
@@ -377,7 +378,7 @@ M.eval = function()
     local end_row = vim.fn.line "'>" - 1
     local end_col = vim.fn.col "'>"
 
-    text = table.concat(vim.api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {}), "\n")
+    text = table.concat(api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {}), "\n")
   end
 
   client.request("evaluate", { expression = text }, noop, 0)
