@@ -7,6 +7,7 @@ local api = vim.api
 ---@field settings powershell.lsp_settings
 ---@field capabilities lsp.ClientCapabilities
 ---@field on_attach? function
+---@field shell? string
 
 ---@type powershell.config
 local default_config = {
@@ -254,6 +255,9 @@ local term_bufs = {}
 --- client id -> term_win
 ---@type table<integer, integer>
 local term_wins = {}
+--- client id -> term_channel
+---@type table<integer, integer>
+local term_channels = {}
 
 --- bufnr -> client id
 ---@type table<integer, integer>
@@ -326,11 +330,12 @@ end
 
 M.initialize_or_attach = function()
   local term_buf = M.term_buf()
+  local term_channel ---@type integer?
   if not term_buf then
     term_buf = api.nvim_create_buf(true, true)
     api.nvim_buf_call(term_buf, function()
       local cmd = make_cmd(M.config.bundle_path, M.config.shell)
-      vim.fn.termopen(cmd)
+      term_channel = vim.fn.termopen(cmd)
     end)
   end
 
@@ -344,6 +349,7 @@ M.initialize_or_attach = function()
         if client then
           clients[buf] = client
           term_bufs[client] = term_buf
+          term_channels[client] = term_channel
         end
       end
     else
@@ -363,7 +369,7 @@ M.eval = function()
     )
     return
   end
-  local client = vim.lsp.get_client_by_id(client_id)
+  local term_channel = assert(term_channels[client_id])
 
   local mode = api.nvim_get_mode().mode
   ---@type string
@@ -376,12 +382,20 @@ M.eval = function()
     local start_row = vim.fn.line "'<" - 1
     local start_col = vim.fn.col "'<" - 1
     local end_row = vim.fn.line "'>" - 1
-    local end_col = vim.fn.col "'>"
+    local end_col = vim.fn.col "'>" --[[@as integer]]
 
-    text = table.concat(api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {}), "\n")
+    local lines = api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {})
+    -- HACK: for some reason, it's necesary to reverse the order of the commands (?)
+    lines = vim.iter(lines):rev():totable()
+    text = table.concat(lines, "\n")
   end
+  text = text .. "\r"
 
-  client.request("evaluate", { expression = text }, noop, 0)
+  api.nvim_chan_send(term_channel, text)
+
+  -- HACK: for some reason, the neovim terminal does not update when using this
+  -- local client = assert(vim.lsp.get_client_by_id(client_id))
+  -- client.request("evaluate", { expression = text }, noop, 0)
 end
 
 return M
