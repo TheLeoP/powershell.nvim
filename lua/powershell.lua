@@ -100,6 +100,19 @@ local default_config = {
 ---@class powershell
 local M = {}
 
+---@type table<integer, integer>
+local term_bufs = {}
+--- client id -> term_win
+---@type table<integer, integer>
+local term_wins = {}
+--- client id -> term_channel
+---@type table<integer, integer>
+local term_channels = {}
+
+--- bufnr -> client id
+---@type table<integer, integer>
+local clients = {}
+
 ---@type powershell.config
 M.config = default_config
 
@@ -110,9 +123,10 @@ M.setup = function(args)
   local ok, dap = pcall(require, "dap")
   if ok then
     dap.adapters.powershell = function(callback)
+      local client = clients[bufnr]
       callback {
         type = "pipe",
-        pipe = M._session_details.debugServicePipeName,
+        pipe = M._session_details[client].debugServicePipeName,
       }
     end
     dap.configurations.ps1 = {
@@ -172,8 +186,9 @@ local function make_cmd(bundle_path, shell)
   }
 end
 
+---@param session_details powershell.session_details
 ---@return powershell.lsp_config|nil
-local function get_lsp_config()
+local function get_lsp_config(session_details)
   if not M.config.bundle_path then
     vim.notify("Powershell.nvim: there is no value configured for `bundle_path`.", vim.log.levels.ERROR)
     return
@@ -182,7 +197,7 @@ local function get_lsp_config()
   ---@type powershell.lsp_config
   local lsp_config = {
     name = "powershell_es",
-    cmd = vim.lsp.rpc.domain_socket_connect(M._session_details.languageServicePipeName),
+    cmd = vim.lsp.rpc.domain_socket_connect(session_details.languageServicePipeName),
     capabilities = M.config.capabilities or default_config.capabilities,
     on_attach = M.config.on_attach or default_config.on_attach,
     settings = M.config.settings or default_config.settings,
@@ -234,9 +249,9 @@ local function wait_for_session_file(file_path, callback)
   inner_try_func(60, 2000)
 end
 
---TODO: session details per client_id
----@type powershell.session_details|nil
-M._session_details = nil
+--- client id -> sesssion_details
+---@type table<integer, powershell.session_details>
+M._session_details = {}
 
 ---@class powershell.lsp.dispatchers
 ---@field notification function
@@ -249,20 +264,6 @@ M._session_details = nil
 ---@field notify fun(method: string, params: any)
 ---@field is_closing function
 ---@field terminate function
-
---- client id -> term_buf
----@type table<integer, integer>
-local term_bufs = {}
---- client id -> term_win
----@type table<integer, integer>
-local term_wins = {}
---- client id -> term_channel
----@type table<integer, integer>
-local term_channels = {}
-
---- bufnr -> client id
----@type table<integer, integer>
-local clients = {}
 
 ---@return integer term_win for current buf
 M.term_win = function()
@@ -343,12 +344,12 @@ M.initialize_or_attach = function()
   local buf = api.nvim_get_current_buf()
   wait_for_session_file(session_file_path, function(session_details, error_msg)
     if session_details then
-      M._session_details = session_details
-      local lsp_config = get_lsp_config()
+      local lsp_config = get_lsp_config(session_details)
       if lsp_config then
         api.nvim_buf_call(buf, function()
           local client = vim.lsp.start(lsp_config)
           if client then
+            M._session_details[client] = session_details
             clients[buf] = client
             term_bufs[client] = term_buf
             term_channels[client] = term_channel
