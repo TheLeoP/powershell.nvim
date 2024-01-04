@@ -10,6 +10,7 @@ This extension provides rich PowerShell language support for Neovim. Now you can
 - Powershell LSP support (via [Powershell Editor Services](https://github.com/PowerShell/PowerShellEditorServices))
 - [Powershell Extension Terminal](https://github.com/PowerShell/PowerShellEditorServices#powershell-extension-terminal) support
 - Debugging support (requires [nvim-dap](https://github.com/mfussenegger/nvim-dap))
+- [$psEditor API](https://github.com/PowerShell/PowerShellEditorServices/blob/main/docs/guide/extensions.md) support
 
 ## Requirements
 
@@ -48,6 +49,7 @@ Plug 'TheLeoP/powershell.nvim'
 The only required field for the plugin to work is `bundle_path`, this has to be the path of where Powershell Editor Services is installed.
 
 For example, if you are using mason with default settings, you would have to do something like the following:
+
 ```lua
 require('powershell').setup({
   bundle_path = vim.fn.stdpath "data" .. "/mason/packages/powershell-editor-services",
@@ -59,12 +61,12 @@ require('powershell').setup({
 ```lua
 -- This is the default configuration
 require('powershell').setup({
-  on_attach = function() end,
   capabilities = vim.lsp.protocol.make_client_capabilities(),
   bundle_path = "",
   init_options = vim.empty_dict(),
   settings = vim.empty_dict(),
   shell = "pwsh",
+  handlers = base_handlers, -- see lua/powershell/handlers.lua
 })
 ```
 
