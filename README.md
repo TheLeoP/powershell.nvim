@@ -1,4 +1,4 @@
-# Powershel.nvim
+# Powershell.nvim
 
 ![GitHub Workflow Status](https://github.com/TheLeoP/powershell.nvim/actions/workflows/lint-test.yml/badge.svg)
 ![Lua](https://img.shields.io/badge/Made%20with%20Lua-blueviolet.svg?style=for-the-badge&logo=lua)
@@ -15,6 +15,7 @@ This extension provides rich PowerShell language support for Neovim. Now you can
 ## Requirements
 
 - [Powershell Editor Services](https://github.com/PowerShell/PowerShellEditorServices) (can be installed manually or using something like [mason.nvim](https://github.com/williamboman/mason.nvim))
+- [Neovim 0.10 (nightly)](https://github.com/neovim/neovim/releases/tag/nightly)
 - (Optional) [nvim-dap](https://github.com/mfussenegger/nvim-dap) (needed for debugging)
 
 ## Installation
