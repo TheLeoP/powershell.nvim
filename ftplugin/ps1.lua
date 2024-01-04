@@ -1,1 +1,1 @@
-require("powershell").initialize_or_attach()
+require("powershell.command").create()
