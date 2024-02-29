@@ -364,6 +364,7 @@ M.eval = function()
   local text
   if mode == "n" then
     text = api.nvim_get_current_line()
+    api.nvim_chan_send(term_channel, text)
   elseif mode == "v" or mode == "V" or mode == "\22" then
     vim.cmd.normal { args = { "\27" }, bang = true }
 
@@ -373,13 +374,11 @@ M.eval = function()
     local end_col = vim.fn.col "'>" --[[@as integer]]
 
     local lines = api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {})
-    -- HACK: for some reason, it's necesary to reverse the order of the commands (?)
-    lines = vim.iter(lines):rev():totable()
-    text = table.concat(lines, "\n")
-  end
-  text = text .. "\r"
 
-  api.nvim_chan_send(term_channel, text)
+    for _, line in ipairs(lines) do
+      api.nvim_chan_send(term_channel, line .. "\r")
+    end
+  end
 
   -- HACK: for some reason, the neovim terminal does not update when using this
   -- local client = assert(vim.lsp.get_client_by_id(client_id))
