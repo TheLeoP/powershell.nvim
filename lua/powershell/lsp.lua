@@ -360,11 +360,10 @@ M.eval = function()
   local term_channel = assert(util.term_channels[client_id])
 
   local mode = api.nvim_get_mode().mode
-  ---@type string
-  local text
+  ---@type string[]?
+  local lines
   if mode == "n" then
-    text = api.nvim_get_current_line()
-    api.nvim_chan_send(term_channel, text)
+    lines = { api.nvim_get_current_line() }
   elseif mode == "v" or mode == "V" or mode == "\22" then
     vim.cmd.normal { args = { "\27" }, bang = true }
 
@@ -373,12 +372,12 @@ M.eval = function()
     local end_row = vim.fn.line "'>" - 1
     local end_col = vim.fn.col "'>" --[[@as integer]]
 
-    local lines = api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {})
-
-    for _, line in ipairs(lines) do
-      api.nvim_chan_send(term_channel, line .. "\r")
-    end
+    lines = api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {})
   end
+  vim
+    .iter(lines)
+    :map(function(line) return line .. "\r" end)
+    :each(function(line) api.nvim_chan_send(term_channel, line) end)
 
   -- HACK: for some reason, the neovim terminal does not update when using this
   -- local client = assert(vim.lsp.get_client_by_id(client_id))
