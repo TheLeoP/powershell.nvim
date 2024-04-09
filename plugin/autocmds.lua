@@ -15,4 +15,5 @@ api.nvim_create_autocmd("Filetype", {
   pattern = "ps1",
   ---@param opts powershell.autocmd
   callback = function(opts) require("powershell").initialize_or_attach(opts.buf) end,
+  desc = "Checks whether powershell_es should start a new instance or attach to an existing one.",
 })
