@@ -1,4 +1,4 @@
-*powershell.nvim.txt*      For Neovim >= 0.10.0     Last change: 2024 March 01
+*powershell.nvim.txt*      For Neovim >= 0.10.0     Last change: 2024 April 09
 
 ==============================================================================
 Table of Contents                          *powershell.nvim-table-of-contents*
@@ -10,6 +10,7 @@ Table of Contents                          *powershell.nvim-table-of-contents*
   - Configuration              |powershell.nvim-powershell.nvim-configuration|
   - Lua API                          |powershell.nvim-powershell.nvim-lua-api|
   - TODO                                |powershell.nvim-powershell.nvim-todo|
+2. Links                                               |powershell.nvim-links|
 
 ==============================================================================
 1. Powershell.nvim                           *powershell.nvim-powershell.nvim*
@@ -93,6 +94,9 @@ DEFAULT CONFIGURATION ~
       settings = vim.empty_dict(),
       shell = "pwsh",
       handlers = base_handlers, -- see lua/powershell/handlers.lua
+      root_dir = function(buf)
+        return fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
+      end,
     })
 <
 
