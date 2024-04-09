@@ -12,6 +12,7 @@ local util = require "powershell.util"
 ---@field on_attach? function
 ---@field shell? string
 ---@field handlers table<string, powershell.handler>
+---@field root_dir fun(buf: integer): string
 
 ---@class powershell.openFile
 ---@field filePath string
@@ -25,6 +26,9 @@ local default_config = {
   settings = vim.empty_dict() --[[@as table]],
   shell = "pwsh",
   handlers = base_handlers,
+  root_dir = function(buf)
+    return fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
+  end,
 }
 
 ---@class powershell.PowerShellAdditionalExePathSettings[]?
@@ -101,16 +105,15 @@ local M = {}
 ---@type powershell.config
 M.config = default_config
 
----@param args powershell.config?
-M.setup = function(args)
-  if args then M.config = vim.tbl_deep_extend("force", M.config, args) end
+---@param userConfig powershell.config?
+M.setup = function(userConfig)
+  if userConfig then M.config = vim.tbl_deep_extend("force", M.config, userConfig) end
 
   local ok, dap = pcall(require, "dap")
   if ok then
     dap.adapters.powershell = function(callback)
       local buf = api.nvim_get_current_buf()
-      local root_dir =
-        fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
+      local root_dir = M.config.root_dir(buf)
       callback {
         type = "pipe",
         pipe = M._session_details[root_dir].debugServicePipeName,
@@ -187,12 +190,12 @@ local function get_lsp_config(buf, session_details)
   local lsp_config = {
     name = "powershell_es",
     cmd = vim.lsp.rpc.domain_socket_connect(session_details.languageServicePipeName),
-    capabilities = M.config.capabilities or default_config.capabilities,
-    on_attach = M.config.on_attach or default_config.on_attach,
-    settings = M.config.settings or default_config.settings,
-    init_options = M.config.init_options or default_config.init_options,
-    handlers = M.config.handlers or default_config.handlers,
-    root_dir = fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1]),
+    capabilities = M.config.capabilities,
+    on_attach = M.config.on_attach,
+    settings = M.config.settings,
+    init_options = M.config.init_options,
+    handlers = M.config.handlers,
+    root_dir = M.config.root_dir(buf),
   }
   return lsp_config
 end
@@ -321,7 +324,7 @@ M.initialize_or_attach = function(buf)
     term_channel = vim.fn.termopen(cmd)
   end)
 
-  local root_dir = fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
+  local root_dir = M.config.root_dir(buf)
 
   local session_details = M._session_details[root_dir]
   if session_details then

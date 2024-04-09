@@ -68,6 +68,9 @@ require('powershell').setup({
   settings = vim.empty_dict(),
   shell = "pwsh",
   handlers = base_handlers, -- see lua/powershell/handlers.lua
+  root_dir = function(buf)
+    return fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
+  end,
 })
 ```
 
