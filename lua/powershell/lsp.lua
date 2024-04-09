@@ -95,17 +95,6 @@ local default_config = {
 ---@field integratedConsole powershell.IntegratedConsoleSettings?
 ---@field bugReporting powershell.BugReportingSettings?
 
----@class powershell.lsp_config
----@field cmd string[]|fun(dispatchers: vim.lsp.rpc.Dispatchers):vim.lsp.rpc.PublicClient
----@field capabilities table
----@field handlers? table<string, function>
----@field settings powershell.lsp_settings
----@field commands? table<string, function>
----@field init_options table<string, any>
----@field name string
----@field on_attach? function
----@field root_dir? string?
-
 ---@class powershell
 local M = {}
 
@@ -120,10 +109,11 @@ M.setup = function(args)
   if ok then
     dap.adapters.powershell = function(callback)
       local buf = api.nvim_get_current_buf()
-      local client = util.clients_id[buf]
+      local root_dir =
+        fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
       callback {
         type = "pipe",
-        pipe = M._session_details[client].debugServicePipeName,
+        pipe = M._session_details[root_dir].debugServicePipeName,
       }
     end
     dap.configurations.ps1 = {
@@ -186,14 +176,14 @@ end
 
 ---@param buf integer
 ---@param session_details powershell.session_details
----@return powershell.lsp_config|nil
+---@return vim.lsp.ClientConfig|nil
 local function get_lsp_config(buf, session_details)
   if not M.config.bundle_path then
     vim.notify("Powershell.nvim: there is no value configured for `bundle_path`.", vim.log.levels.ERROR)
     return
   end
 
-  ---@type powershell.lsp_config
+  ---@type vim.lsp.ClientConfig
   local lsp_config = {
     name = "powershell_es",
     cmd = vim.lsp.rpc.domain_socket_connect(session_details.languageServicePipeName),
