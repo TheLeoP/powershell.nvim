@@ -249,8 +249,8 @@ local function wait_for_session_file(file_path, callback)
   inner_try_func(60, 2000)
 end
 
---- client id -> sesssion_details
----@type table<integer, powershell.session_details>
+--- root_dir -> sesssion_details
+---@type table<string, powershell.session_details>
 M._session_details = {}
 
 ---@class powershell.lsp.dispatchers
@@ -317,29 +317,40 @@ end
 
 ---@param buf integer
 M.initialize_or_attach = function(buf)
+  if vim.bo[buf].buftype == "nofile" then return end
+
+  local bufname = api.nvim_buf_get_name(buf)
+  if #bufname == 0 then return end
+
   local term_buf = util.term_buf(buf)
+
   local term_channel ---@type integer?
-  if not term_buf then
-    term_buf = api.nvim_create_buf(true, true)
-    api.nvim_buf_call(term_buf, function()
-      local cmd = make_cmd(M.config.bundle_path, M.config.shell)
-      term_channel = vim.fn.termopen(cmd)
-    end)
+  term_buf = api.nvim_create_buf(true, true)
+  api.nvim_buf_call(term_buf, function()
+    local cmd = make_cmd(M.config.bundle_path, M.config.shell)
+    term_channel = vim.fn.termopen(cmd)
+  end)
+
+  local root_dir = fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
+
+  local session_details = M._session_details[root_dir]
+  if session_details then
+    local lsp_config = get_lsp_config(buf, session_details)
+    if lsp_config then vim.lsp.start(lsp_config, { bufnr = buf }) end
+    return
   end
 
   wait_for_session_file(session_file_path, function(session_details, error_msg)
     if session_details then
       local lsp_config = get_lsp_config(buf, session_details)
       if lsp_config then
-        api.nvim_buf_call(buf, function()
-          local client = vim.lsp.start(lsp_config, { bufnr = buf })
-          if client then
-            M._session_details[client] = session_details
-            util.clients_id[buf] = client
-            util.term_bufs[client] = term_buf
-            util.term_channels[client] = term_channel
-          end
-        end)
+        local client = vim.lsp.start(lsp_config, { bufnr = buf })
+        if client then
+          M._session_details[root_dir] = session_details
+          util.clients_id[buf] = client
+          util.term_bufs[client] = term_buf
+          util.term_channels[client] = term_channel
+        end
       end
     else
       vim.notify(error_msg, vim.log.levels.ERROR)
