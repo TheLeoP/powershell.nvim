@@ -189,7 +189,7 @@ local function get_lsp_config(buf, session_details)
   ---@type vim.lsp.ClientConfig
   local lsp_config = {
     name = "powershell_es",
-    cmd = vim.lsp.rpc.domain_socket_connect(session_details.languageServicePipeName),
+    cmd = vim.lsp.rpc.connect(session_details.languageServicePipeName),
     capabilities = M.config.capabilities,
     on_attach = M.config.on_attach,
     settings = M.config.settings,
