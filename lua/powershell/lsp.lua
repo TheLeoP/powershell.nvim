@@ -27,7 +27,8 @@ local default_config = {
   shell = "pwsh",
   handlers = base_handlers,
   root_dir = function(buf)
-    return fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
+    local current_file_dir = fs.dirname(api.nvim_buf_get_name(buf))
+    return fs.dirname(fs.find({ ".git" }, { upward = true, path = current_file_dir })[1]) or current_file_dir
   end,
 }
 
