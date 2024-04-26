@@ -335,20 +335,18 @@ M.initialize_or_attach = function(buf)
   end
 
   wait_for_session_file(session_file_path, function(session_details, error_msg)
-    if session_details then
-      local lsp_config = get_lsp_config(buf, session_details)
-      if lsp_config then
-        local client = vim.lsp.start(lsp_config, { bufnr = buf })
-        if client then
-          M._session_details[root_dir] = session_details
-          util.clients_id[buf] = client
-          util.term_bufs[client] = term_buf
-          util.term_channels[client] = term_channel
-        end
-      end
-    else
-      vim.notify(error_msg, vim.log.levels.ERROR)
-    end
+    if not session_details then return vim.notify(error_msg, vim.log.levels.ERROR) end
+
+    local lsp_config = get_lsp_config(buf, session_details)
+    if not lsp_config then return end
+
+    local client = vim.lsp.start(lsp_config, { bufnr = buf })
+    if not client then return vim.notify("LSP client has not been initialized", vim.log.levels.ERROR) end
+
+    M._session_details[root_dir] = session_details
+    util.clients_id[buf] = client
+    util.term_bufs[client] = term_buf
+    util.term_channels[client] = term_channel
   end)
 end
 
