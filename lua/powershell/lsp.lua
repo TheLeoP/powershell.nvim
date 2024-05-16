@@ -116,20 +116,20 @@ local M = {}
 ---@type powershell.config
 M.config = default_config
 
----@param userConfig powershell.user_config
-M.setup = function(userConfig)
+---@param user_config powershell.user_config
+M.setup = function(user_config)
   vim.validate {
-    bundle_path = { userConfig.bundle_path, "string" },
-    init_options = { userConfig.init_options, "table", true },
-    settings = { userConfig.settings, "table", true },
-    capabilities = { userConfig.capabilities, "table", true },
-    on_attach = { userConfig.on_attach, "function", true },
-    shell = { userConfig.shell, "string", true },
-    handlers = { userConfig.handlers, "table", true },
-    root_dir = { userConfig.root_dir, "function", true },
+    bundle_path = { user_config.bundle_path, "string" },
+    init_options = { user_config.init_options, "table", true },
+    settings = { user_config.settings, "table", true },
+    capabilities = { user_config.capabilities, "table", true },
+    on_attach = { user_config.on_attach, "function", true },
+    shell = { user_config.shell, "string", true },
+    handlers = { user_config.handlers, "table", true },
+    root_dir = { user_config.root_dir, "function", true },
   }
 
-  if userConfig then M.config = vim.tbl_deep_extend("force", M.config, userConfig) end
+  if user_config then M.config = vim.tbl_deep_extend("force", M.config, user_config) end
 
   local ok, dap = pcall(require, "dap")
   if ok then
