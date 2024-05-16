@@ -15,7 +15,7 @@ This extension provides rich PowerShell language support for Neovim. Now you can
 ## Requirements
 
 - [Powershell Editor Services](https://github.com/PowerShell/PowerShellEditorServices) (can be installed manually or using something like [mason.nvim](https://github.com/williamboman/mason.nvim))
-- [Neovim 0.10 (nightly)](https://github.com/neovim/neovim/releases/tag/nightly)
+- [Neovim >= 0.10](https://github.com/neovim/neovim/releases/tag/v0.10.0)
 - (Optional) [nvim-dap](https://github.com/mfussenegger/nvim-dap) (needed for debugging)
 
 ## Installation
@@ -33,6 +33,7 @@ use {
 ```lua
 {
     "TheLeoP/powershell.nvim",
+    ---@type powershell.user_config
     opts = {
       bundle_path = 'path/to/your/bundle_path/'
     }
