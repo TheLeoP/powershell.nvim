@@ -1,4 +1,4 @@
-*powershell.nvim.txt*      For Neovim >= 0.10.0     Last change: 2024 April 26
+*powershell.nvim.txt*       For Neovim >= 0.10.0      Last change: 2024 May 16
 
 ==============================================================================
 Table of Contents                          *powershell.nvim-table-of-contents*
@@ -33,7 +33,7 @@ FEATURES                            *powershell.nvim-powershell.nvim-features*
 REQUIREMENTS                    *powershell.nvim-powershell.nvim-requirements*
 
 - Powershell Editor Services <https://github.com/PowerShell/PowerShellEditorServices> (can be installed manually or using something like mason.nvim <https://github.com/williamboman/mason.nvim>)
-- Neovim 0.10 (nightly) <https://github.com/neovim/neovim/releases/tag/nightly>
+- Neovim >= 0.10 <https://github.com/neovim/neovim/releases/tag/v0.10.0>
 - (Optional) nvim-dap <https://github.com/mfussenegger/nvim-dap> (needed for debugging)
 
 
@@ -54,6 +54,7 @@ LAZY.NVIM ~
 >lua
     {
         "TheLeoP/powershell.nvim",
+        ---@type powershell.user_config
         opts = {
           bundle_path = 'path/to/your/bundle_path/'
         }
