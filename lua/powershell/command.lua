@@ -40,7 +40,6 @@ M.create = function()
       local buf = api.nvim_get_current_buf()
       local client_id = util.client_id(buf)
       local client = assert(vim.lsp.get_client_by_id(client_id))
-      ---@type powershell.editor_context
       local context = util.get_editor_context(opts.range ~= 0)
       client.request("powerShell/invokeExtensionCommand", { name = command, Context = context }, util.noop, 0)
     end,
