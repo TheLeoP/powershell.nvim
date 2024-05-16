@@ -4,6 +4,16 @@ local api = vim.api
 local base_handlers = require "powershell.handlers"
 local util = require "powershell.util"
 
+---@class powershell.user_config
+---@field bundle_path string
+---@field init_options table<string, any>|nil
+---@field settings powershell.lsp_settings|nil
+---@field capabilities lsp.ClientCapabilities|nil
+---@field on_attach? function|nil
+---@field shell? string|nil
+---@field handlers table<string, powershell.handler>|nil
+---@field root_dir nil|fun(buf: integer): string
+
 ---@class powershell.config
 ---@field bundle_path string
 ---@field init_options table<string, any>
@@ -91,7 +101,7 @@ local default_config = {
 ---@field startAutomatically boolean?
 ---@field useX86Host boolean?
 ---@field enableProfileLoading boolean?
----@field helpCompletion string
+---@field helpCompletion string?
 ---@field scriptAnalysis powershell.ScriptAnalysisSettings?
 ---@field debugging powershell.DebuggingSettings?
 ---@field developer powershell.DeveloperSettings?
@@ -106,7 +116,7 @@ local M = {}
 ---@type powershell.config
 M.config = default_config
 
----@param userConfig powershell.config?
+---@param userConfig powershell.user_config
 M.setup = function(userConfig)
   if userConfig then M.config = vim.tbl_deep_extend("force", M.config, userConfig) end
 
