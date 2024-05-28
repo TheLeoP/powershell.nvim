@@ -1,7 +1,5 @@
-local fs = vim.fs
 local api = vim.api
 
-local base_handlers = require "powershell.handlers"
 local util = require "powershell.util"
 
 ---@class powershell.user_config
@@ -27,20 +25,6 @@ local util = require "powershell.util"
 ---@class powershell.openFile
 ---@field filePath string
 ---@field preview boolean
-
----@type powershell.config
-local default_config = {
-  capabilities = vim.lsp.protocol.make_client_capabilities(),
-  bundle_path = "",
-  init_options = vim.empty_dict() --[[@as table]],
-  settings = vim.empty_dict() --[[@as table]],
-  shell = "pwsh",
-  handlers = base_handlers,
-  root_dir = function(buf)
-    local current_file_dir = fs.dirname(api.nvim_buf_get_name(buf))
-    return fs.dirname(fs.find({ ".git" }, { upward = true, path = current_file_dir })[1]) or current_file_dir
-  end,
-}
 
 ---@class powershell.PowerShellAdditionalExePathSettings[]?
 ---@field versionName string
@@ -113,9 +97,6 @@ local default_config = {
 ---@class powershell
 local M = {}
 
----@type powershell.config
-M.config = default_config
-
 ---@param user_config powershell.user_config
 M.setup = function(user_config)
   vim.validate {
@@ -129,46 +110,13 @@ M.setup = function(user_config)
     root_dir = { user_config.root_dir, "function", true },
   }
 
-  if user_config then M.config = vim.tbl_deep_extend("force", M.config, user_config) end
-
-  local ok, dap = pcall(require, "dap")
-  if ok then
-    dap.adapters.powershell = function(callback)
-      local buf = api.nvim_get_current_buf()
-      local root_dir = M.config.root_dir(buf)
-      callback {
-        type = "pipe",
-        pipe = M._session_details[root_dir].debugServicePipeName,
-      }
-    end
-    dap.configurations.ps1 = {
-      {
-        name = "PowerShell: Launch Current File",
-        type = "powershell",
-        request = "launch",
-        script = "${file}",
-      },
-      {
-        name = "PowerShell: Attach to PowerShell Host Process",
-        type = "powershell",
-        request = "attach",
-        runspaceId = 1,
-      },
-      {
-        name = "PowerShell: Run Pester Tests",
-        type = "powershell",
-        request = "launch",
-        script = "Invoke-Pester",
-        createTemporaryIntegratedConsole = true,
-        attachDotnetDebugger = true,
-      },
-      {
-        name = "PowerShell: Interactive Session",
-        type = "powershell",
-        request = "launch",
-      },
-    }
+  if user_config then
+    local config = require "powershell.config"
+    config.config = vim.tbl_deep_extend("keep", user_config, config.default_config) --[[@as powershell.config]]
   end
+
+  local ok = pcall(require, "dap")
+  if ok then require("powershell.dap").setup() end
 end
 
 -- TODO: modify to allow multiple different seession_files
@@ -192,6 +140,7 @@ local function make_cmd(bundle_path, shell)
     -- TODO: make this configurable
     "-LogLevel", "Normal",
     "-BundledModulesPath", ("%s"):format(bundle_path),
+    "-LanguageServiceOnly",
     "-EnableConsoleRepl",
     "-SessionDetailsPath", session_file_path,
     "-AdditionalModules", "@()",
@@ -203,7 +152,8 @@ end
 ---@param session_details powershell.session_details
 ---@return vim.lsp.ClientConfig|nil
 local function get_lsp_config(buf, session_details)
-  if not M.config.bundle_path then
+  local config = require("powershell.config").config
+  if not config.bundle_path then
     vim.notify("Powershell.nvim: there is no value configured for `bundle_path`.", vim.log.levels.ERROR)
     return
   end
@@ -212,12 +162,12 @@ local function get_lsp_config(buf, session_details)
   local lsp_config = {
     name = "powershell_es",
     cmd = vim.lsp.rpc.connect(session_details.languageServicePipeName),
-    capabilities = M.config.capabilities,
-    on_attach = M.config.on_attach,
-    settings = M.config.settings,
-    init_options = M.config.init_options,
-    handlers = M.config.handlers,
-    root_dir = M.config.root_dir(buf),
+    capabilities = config.capabilities,
+    on_attach = config.on_attach,
+    settings = config.settings,
+    init_options = config.init_options,
+    handlers = config.handlers,
+    root_dir = config.root_dir(buf),
   }
   return lsp_config
 end
@@ -230,43 +180,9 @@ end
 ---@field powerShellVersion string?
 ---@field status string?
 
----@param file_path string
----@param callback fun(session_details: powershell.session_details?, error_msg: string?)
-local function wait_for_session_file(file_path, callback)
-  ---@param remaining_tries integer
-  ---@param delay_miliseconds integer
-  local function inner_try_func(remaining_tries, delay_miliseconds)
-    if remaining_tries == 0 then
-      vim.notify(
-        ("Powershell.nvim: the session file on path `%s` could not be found."):format(file_path),
-        vim.log.levels.ERROR
-      )
-    elseif not (vim.fn.filereadable(file_path) == 1) then
-      vim.defer_fn(function() inner_try_func(remaining_tries - 1, delay_miliseconds) end, delay_miliseconds)
-    else
-      local f, error_msg = io.open(file_path)
-      if not f then
-        vim.notify(
-          ("Powershell.nvim: %s"):format(
-            error_msg or ("the session file on path `%s` could not be read."):format(file_path)
-          ),
-          vim.log.levels.ERROR
-        )
-        return
-      end
-      local session_file = vim.json.decode(f:read "*a")
-      f:close()
-      vim.fn.delete(file_path)
-
-      callback(session_file)
-    end
-  end
-  inner_try_func(60, 2000)
-end
-
 --- root_dir -> sesssion_details
 ---@type table<string, powershell.session_details>
-M._session_details = {}
+local session_details = {}
 
 ---@class powershell.lsp.dispatchers
 ---@field notification function
@@ -280,53 +196,53 @@ M._session_details = {}
 ---@field is_closing function
 ---@field terminate function
 
---- @return boolean
-M.is_term_open = function()
+---@param opts powershell.toggle_term_opts
+---@return boolean
+function M.is_term_open(opts)
   local buf = api.nvim_get_current_buf()
-  local term_win = util.term_win(buf)
+  local term_win = util.term_win(buf, opts)
   if not term_win then return false end
 
   local win_type = vim.fn.win_gettype(term_win)
 
   -- empty string window type corresponds to a normal window
   local win_open = win_type == "" or win_type == "popup"
-  return win_open and api.nvim_win_get_buf(term_win) == util.term_buf(buf)
+  return win_open and api.nvim_win_get_buf(term_win) == util.term_buf(buf, opts)
 end
 
-M.open_term = function()
+---@param opts powershell.toggle_term_opts
+M.open_term = function(opts)
   local bufnr = api.nvim_get_current_buf()
-  local term_bufnr = util.term_buf(bufnr)
-  if term_bufnr then
-    local client = util.clients_id[bufnr]
+  local term_bufnr = util.term_buf(bufnr, opts)
+  if not term_bufnr then return vim.notify("Powershell.nvim: there is no terminal buffer", vim.log.levels.ERROR) end
 
-    --TODO: make this configurable
-    vim.cmd.split()
-    api.nvim_set_current_buf(term_bufnr)
-    local term_win = api.nvim_get_current_win()
-    util.term_wins[client] = term_win
+  local client = util.clients_id[bufnr]
 
-    -- To toggle when inside terminal window
-    if not util.clients_id[term_bufnr] then util.clients_id[term_bufnr] = client end
-  else
-    vim.notify("Powershell.nvim: there is no terminal buffer", vim.log.levels.ERROR)
-  end
+  --TODO: make this configurable
+  vim.cmd.split()
+  api.nvim_set_current_buf(term_bufnr)
+  local term_win = api.nvim_get_current_win()
+  util.term_wins[client] = term_win
+
+  -- To toggle when inside terminal window
+  if not util.clients_id[term_bufnr] then util.clients_id[term_bufnr] = client end
 end
 
-M.close_term = function()
+---@param opts powershell.toggle_term_opts
+function M.close_term(opts)
   local buf = api.nvim_get_current_buf()
-  local term_win = util.term_win(buf)
-  if term_win then
-    api.nvim_win_close(term_win, true)
-  else
-    vim.notify("Powershell.nvim: there is no terminal window", vim.log.levels.ERROR)
-  end
+  local term_win = util.term_win(buf, opts)
+  if not term_win then return vim.notify("Powershell.nvim: there is no terminal window", vim.log.levels.ERROR) end
+
+  api.nvim_win_close(term_win, true)
 end
 
-M.toggle_term = function()
-  if M.is_term_open() then
-    M.close_term()
+---@param opts powershell.toggle_term_opts
+M.toggle_term = function(opts)
+  if M.is_term_open(opts) then
+    M.close_term(opts)
   else
-    M.open_term()
+    M.open_term(opts)
   end
 end
 
@@ -337,34 +253,38 @@ M.initialize_or_attach = function(buf)
   local bufname = api.nvim_buf_get_name(buf)
   if #bufname == 0 then return end
 
+  local config = require("powershell.config").config
   local term_buf = util.term_buf(buf)
 
-  local term_channel ---@type integer?
-  term_buf = api.nvim_create_buf(true, true)
-  api.nvim_buf_call(term_buf, function()
-    local cmd = make_cmd(M.config.bundle_path, M.config.shell)
-    term_channel = vim.fn.termopen(cmd)
-  end)
+  local client_id = util.clients_id[buf]
+  local term_channel = util.term_channels[client_id]
+  if not term_buf or not term_channel then
+    term_buf = api.nvim_create_buf(true, true)
+    api.nvim_buf_call(term_buf, function()
+      local cmd = make_cmd(config.bundle_path, config.shell)
+      term_channel = vim.fn.termopen(cmd)
+    end)
+  end
 
-  local root_dir = M.config.root_dir(buf)
+  local root_dir = config.root_dir(buf)
 
-  local session_details = M._session_details[root_dir]
-  if session_details then
-    local lsp_config = get_lsp_config(buf, session_details)
+  local current_session_details = session_details[root_dir]
+  if current_session_details then
+    local lsp_config = get_lsp_config(buf, current_session_details)
     if lsp_config then vim.lsp.start(lsp_config, { bufnr = buf }) end
     return
   end
 
-  wait_for_session_file(session_file_path, function(session_details, error_msg)
-    if not session_details then return vim.notify(error_msg, vim.log.levels.ERROR) end
+  util.wait_for_session_file(session_file_path, function(current_session_details, error_msg)
+    if not current_session_details then return vim.notify(error_msg, vim.log.levels.ERROR) end
 
-    local lsp_config = get_lsp_config(buf, session_details)
+    local lsp_config = get_lsp_config(buf, current_session_details)
     if not lsp_config then return end
 
     local client = vim.lsp.start(lsp_config, { bufnr = buf })
     if not client then return vim.notify("LSP client has not been initialized", vim.log.levels.ERROR) end
 
-    M._session_details[root_dir] = session_details
+    session_details[root_dir] = current_session_details
     util.clients_id[buf] = client
     util.term_bufs[client] = term_buf
     util.term_channels[client] = term_channel

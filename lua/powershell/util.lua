@@ -92,4 +92,38 @@ end
 ---@return string[]
 M.string_to_lines = function(string) return vim.split(string, "\r?\n") end
 
+---@param file_path string
+---@param callback fun(session_details: powershell.session_details?, error_msg: string?)
+function M.wait_for_session_file(file_path, callback)
+  ---@param remaining_tries integer
+  ---@param delay_miliseconds integer
+  local function inner_try_func(remaining_tries, delay_miliseconds)
+    if remaining_tries == 0 then
+      vim.notify(
+        ("Powershell.nvim: the session file on path `%s` could not be found."):format(file_path),
+        vim.log.levels.ERROR
+      )
+    elseif not (vim.fn.filereadable(file_path) == 1) then
+      vim.defer_fn(function() inner_try_func(remaining_tries - 1, delay_miliseconds) end, delay_miliseconds)
+    else
+      local f, error_msg = io.open(file_path)
+      if not f then
+        vim.notify(
+          ("Powershell.nvim: %s"):format(
+            error_msg or ("the session file on path `%s` could not be read."):format(file_path)
+          ),
+          vim.log.levels.ERROR
+        )
+        return
+      end
+      local session_file = vim.json.decode(f:read "*a")
+      f:close()
+      vim.fn.delete(file_path)
+
+      callback(session_file)
+    end
+  end
+  inner_try_func(60, 500)
+end
+
 return M
