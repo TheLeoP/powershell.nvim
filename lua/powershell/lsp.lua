@@ -323,7 +323,7 @@ M.eval = function()
     :map(function(line) return line .. "\r" end)
     :each(function(line) api.nvim_chan_send(term_channel, line) end)
 
-  -- HACK: for some reason, the neovim terminal does not update when using this
+  -- TODO: wait for response on https://github.com/PowerShell/PowerShellEditorServices/issues/2164
   -- local client = assert(vim.lsp.get_client_by_id(client_id))
   -- client.request("evaluate", { expression = text }, util.noop, 0)
 end
