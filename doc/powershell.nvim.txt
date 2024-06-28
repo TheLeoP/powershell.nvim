@@ -1,4 +1,4 @@
-*powershell.nvim.txt*       For Neovim >= 0.10.0      Last change: 2024 May 28
+*powershell.nvim.txt*      For Neovim >= 0.10.0      Last change: 2024 June 28
 
 ==============================================================================
 Table of Contents                          *powershell.nvim-table-of-contents*
@@ -9,6 +9,7 @@ Table of Contents                          *powershell.nvim-table-of-contents*
   - Installation                |powershell.nvim-powershell.nvim-installation|
   - Configuration              |powershell.nvim-powershell.nvim-configuration|
   - Lua API                          |powershell.nvim-powershell.nvim-lua-api|
+  - DAP                                  |powershell.nvim-powershell.nvim-dap|
   - TODO                                |powershell.nvim-powershell.nvim-todo|
 2. Links                                               |powershell.nvim-links|
 
@@ -138,6 +139,48 @@ To create a keymap only for powershell files, put the following in your config.
 <
 
 You could also use a filetype autocmd to create the keymap.
+
+
+DAP                                      *powershell.nvim-powershell.nvim-dap*
+
+By default, the plugin includes the following nvim-dap
+<https://github.com/mfussenegger/nvim-dap> configurations:
+
+>lua
+    dap.configurations.ps1 = {
+      {
+        name = "PowerShell: Launch Current File",
+        type = "ps1",
+        request = "launch",
+        script = "${file}",
+      },
+      {
+        name = "PowerShell: Launch Script",
+        type = "ps1",
+        request = "launch",
+        script = function()
+          return coroutine.create(function(co)
+            vim.ui.input({
+              prompt = 'Enter path or command to execute, for example: "${workspaceFolder}/src/foo.ps1" or "Invoke-Pester"',
+              completion = "file",
+            }, function(selected) coroutine.resume(co, selected) end)
+          end)
+        end,
+      },
+      {
+        name = "PowerShell: Attach to PowerShell Host Process",
+        type = "ps1",
+        request = "attach",
+        processId = "${command:pickProcess}",
+      },
+    }
+<
+
+To use them, simply call `require('dap').continue()` inside of a `ps1` file.
+
+**NOTE**currently, debugging does not support launching an integrated terminal
+because of PowerShell/PowerShellEditorServices#2164
+<https://github.com/PowerShell/PowerShellEditorServices/issues/2164>
 
 
 TODO                                    *powershell.nvim-powershell.nvim-todo*
