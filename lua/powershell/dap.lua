@@ -13,11 +13,12 @@ vim.fn.delete(session_file_path)
 
 ---@param bundle_path string
 ---@return string[]
-local function make_args(bundle_path)
+local function make_cmd(bundle_path)
   local file = ("%s/PowerShellEditorServices/Start-EditorServices.ps1"):format(bundle_path)
   file = vim.fs.normalize(file)
   --stylua: ignore
   return {
+    "pwsh",
     "-NoLogo",
     "-NoProfile",
     "-NonInteractive",
@@ -30,7 +31,6 @@ local function make_args(bundle_path)
     "-LogLevel", "Normal",
     "-BundledModulesPath", ("%s"):format(bundle_path),
     "-DebugServiceOnly",
-    "-DebugServicePipeName", "${pipe}",
     -- TODO: wait for response on https://github.com/PowerShell/PowerShellEditorServices/issues/2164
     -- "-EnableConsoleRepl",
     "-SessionDetailsPath", session_file_path,
@@ -41,17 +41,17 @@ function M.setup()
   local dap = require "dap"
   local config = require("powershell.config").config
 
-  -- TODO: this is broken on windows until https://github.com/mfussenegger/nvim-dap/issues/1230
   dap.adapters.powershell_no_term = function(on_config)
-    on_config {
-      type = "pipe",
-      pipe = "${pipe}",
-      executable = {
-        command = config.shell,
-        args = make_args(config.bundle_path),
-        detached = false,
-      },
-    }
+    local cmd = make_cmd(config.bundle_path)
+    vim.system(cmd)
+    util.wait_for_session_file(session_file_path, function(current_session_details, error_msg)
+      if error_msg then return vim.notify(error_msg, vim.log.levels.ERROR) end
+
+      on_config {
+        type = "pipe",
+        pipe = current_session_details.debugServicePipeName,
+      }
+    end)
   end
   dap.configurations.ps1 = {
     {

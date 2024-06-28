@@ -276,7 +276,7 @@ M.initialize_or_attach = function(buf)
   end
 
   util.wait_for_session_file(session_file_path, function(current_session_details, error_msg)
-    if not current_session_details then return vim.notify(error_msg, vim.log.levels.ERROR) end
+    if error_msg then return vim.notify(error_msg, vim.log.levels.ERROR) end
 
     local lsp_config = get_lsp_config(buf, current_session_details)
     if not lsp_config then return end
