@@ -41,7 +41,7 @@ function M.setup()
   local dap = require "dap"
   local config = require("powershell.config").config
 
-  dap.adapters.powershell_no_term = function(on_config)
+  dap.adapters.ps1 = function(on_config)
     local cmd = make_cmd(config.bundle_path)
     vim.system(cmd)
     util.wait_for_session_file(session_file_path, function(current_session_details, error_msg)
@@ -55,10 +55,29 @@ function M.setup()
   end
   dap.configurations.ps1 = {
     {
-      name = "PowerShell: Launch Current File (no term)",
-      type = "powershell_no_term",
+      name = "PowerShell: Launch Current File",
+      type = "ps1",
       request = "launch",
       script = "${file}",
+    },
+    {
+      name = "PowerShell: Launch Script",
+      type = "ps1",
+      request = "launch",
+      script = function()
+        return coroutine.create(function(co)
+          vim.ui.input({
+            prompt = 'Enter path or command to execute, for example: "${workspaceFolder}/src/foo.ps1" or "Invoke-Pester"',
+            completion = "file",
+          }, function(selected) coroutine.resume(co, selected) end)
+        end)
+      end,
+    },
+    {
+      name = "PowerShell: Attach to PowerShell Host Process",
+      type = "ps1",
+      request = "attach",
+      processId = "${command:pickProcess}",
     },
   }
 end
