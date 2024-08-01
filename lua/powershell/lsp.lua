@@ -50,24 +50,24 @@ local util = require "powershell.util"
 ---@field showLastLine boolean?
 
 ---@class powershell.CodeFormattingSettings
----@field autoCorrectAliases boolean
----@field preset "Custom"|"Allman"|"OTBS"|"Stroustrup"
----@field openBraceOnSameLine boolean
----@field newLineAfterOpenBrace boolean
----@field newLineAfterCloseBrace boolean
----@field pipelineIndentationStyle "IncreaseIndentationForFirstPipeline"|"IncreaseIndentationAfterEveryPipeline"|"NoIndentation"
----@field whitespaceBeforeOpenBrace boolean
----@field whitespaceBeforeOpenParen boolean
----@field whitespaceAroundOperator boolean
----@field whitespaceAfterSeparator boolean
----@field whitespaceBetweenParameters boolean
----@field whitespaceInsideBrace boolean
----@field addWhitespaceAroundPipe boolean
----@field trimWhitespaceAroundPipe boolean
----@field ignoreOneLineBlock boolean
----@field alignPropertyValuePairs boolean
----@field useConstantStrings boolean
----@field useCorrectCasing boolean
+---@field autoCorrectAliases boolean?
+---@field preset "Custom"|"Allman"|"OTBS"|"Stroustrup"?
+---@field openBraceOnSameLine boolean?
+---@field newLineAfterOpenBrace boolean?
+---@field newLineAfterCloseBrace boolean?
+---@field pipelineIndentationStyle "IncreaseIndentationForFirstPipeline"|"IncreaseIndentationAfterEveryPipeline"|"NoIndentation"?
+---@field whitespaceBeforeOpenBrace boolean?
+---@field whitespaceBeforeOpenParen boolean?
+---@field whitespaceAroundOperator boolean?
+---@field whitespaceAfterSeparator boolean?
+---@field whitespaceBetweenParameters boolean?
+---@field whitespaceInsideBrace boolean?
+---@field addWhitespaceAroundPipe boolean?
+---@field trimWhitespaceAroundPipe boolean?
+---@field ignoreOneLineBlock boolean?
+---@field alignPropertyValuePairs boolean?
+---@field useConstantStrings boolean?
+---@field useCorrectCasing boolean?
 
 ---@class powershell.IntegratedConsoleSettings
 ---@field showOnStartup boolean?
@@ -196,24 +196,22 @@ local session_details = {}
 ---@field is_closing function
 ---@field terminate function
 
----@param opts powershell.toggle_term_opts
 ---@return boolean
-function M.is_term_open(opts)
+function M.is_term_open()
   local buf = api.nvim_get_current_buf()
-  local term_win = util.term_win(buf, opts)
+  local term_win = util.term_win(buf)
   if not term_win then return false end
 
   local win_type = vim.fn.win_gettype(term_win)
 
   -- empty string window type corresponds to a normal window
   local win_open = win_type == "" or win_type == "popup"
-  return win_open and api.nvim_win_get_buf(term_win) == util.term_buf(buf, opts)
+  return win_open and api.nvim_win_get_buf(term_win) == util.term_buf(buf)
 end
 
----@param opts powershell.toggle_term_opts
-M.open_term = function(opts)
+M.open_term = function()
   local bufnr = api.nvim_get_current_buf()
-  local term_bufnr = util.term_buf(bufnr, opts)
+  local term_bufnr = util.term_buf(bufnr)
   if not term_bufnr then return vim.notify("Powershell.nvim: there is no terminal buffer", vim.log.levels.ERROR) end
 
   local client = util.clients_id[bufnr]
@@ -228,21 +226,19 @@ M.open_term = function(opts)
   if not util.clients_id[term_bufnr] then util.clients_id[term_bufnr] = client end
 end
 
----@param opts powershell.toggle_term_opts
-function M.close_term(opts)
+function M.close_term()
   local buf = api.nvim_get_current_buf()
-  local term_win = util.term_win(buf, opts)
+  local term_win = util.term_win(buf)
   if not term_win then return vim.notify("Powershell.nvim: there is no terminal window", vim.log.levels.ERROR) end
 
   api.nvim_win_close(term_win, true)
 end
 
----@param opts powershell.toggle_term_opts
-M.toggle_term = function(opts)
-  if M.is_term_open(opts) then
-    M.close_term(opts)
+M.toggle_term = function()
+  if M.is_term_open() then
+    M.close_term()
   else
-    M.open_term(opts)
+    M.open_term()
   end
 end
 
