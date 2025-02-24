@@ -13,12 +13,12 @@ vim.fn.delete(session_file_path)
 
 ---@param bundle_path string
 ---@return string[]
-local function make_cmd(bundle_path)
+local function make_cmd(bundle_path, shell)
   local file = ("%s/PowerShellEditorServices/Start-EditorServices.ps1"):format(bundle_path)
   file = vim.fs.normalize(file)
   --stylua: ignore
   return {
-    "pwsh",
+    shell,
     "-NoLogo",
     "-NoProfile",
     "-NonInteractive",
@@ -42,7 +42,7 @@ function M.setup()
   local config = require("powershell.config").config
 
   dap.adapters.ps1 = function(on_config)
-    local cmd = make_cmd(config.bundle_path)
+    local cmd = make_cmd(config.bundle_path, config.shell)
     vim.system(cmd)
     util.wait_for_session_file(session_file_path, function(current_session_details, error_msg)
       if error_msg then return vim.notify(error_msg, vim.log.levels.ERROR) end
