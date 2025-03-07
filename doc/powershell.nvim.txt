@@ -1,4 +1,4 @@
-*powershell.nvim.txt*    For Neovim >= 0.10.0    Last change: 2025 February 24
+*powershell.nvim.txt*      For Neovim >= 0.10.0     Last change: 2025 March 07
 
 ==============================================================================
 Table of Contents                          *powershell.nvim-table-of-contents*
@@ -135,7 +135,7 @@ To create a keymap only for powershell files, put the following in your config.
 
 >lua
     -- this should go in ~/.config/nvim/ftplugin/ps1.lua
-    vim.keymap.set("n", "<leader>E", function() require("powershell").eval() end)
+    vim.keymap.set({ "n", "x" }, "<leader>E", function() require("powershell").eval() end)
 <
 
 You could also use a filetype autocmd to create the keymap.
