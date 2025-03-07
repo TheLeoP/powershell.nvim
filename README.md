@@ -104,7 +104,7 @@ To create a keymap only for powershell files, put the following in your config.
 
 ```lua
 -- this should go in ~/.config/nvim/ftplugin/ps1.lua
-vim.keymap.set("n", "<leader>E", function() require("powershell").eval() end)
+vim.keymap.set({ "n", "x" }, "<leader>E", function() require("powershell").eval() end)
 ```
 
 You could also use a filetype autocmd to create the keymap.
