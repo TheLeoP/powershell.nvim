@@ -1,6 +1,7 @@
 local api = vim.api
 local fs = vim.fs
 local base_handlers = require "powershell.handlers"
+local base_commands = require "powershell.commands"
 
 local M = {}
 
@@ -12,6 +13,7 @@ M.default_config = {
   settings = vim.empty_dict() --[[@as table]],
   shell = "pwsh",
   handlers = base_handlers,
+  commands = base_commands,
   root_dir = function(buf)
     local current_file_dir = fs.dirname(api.nvim_buf_get_name(buf))
     return fs.dirname(fs.find({ ".git" }, { upward = true, path = current_file_dir })[1]) or current_file_dir

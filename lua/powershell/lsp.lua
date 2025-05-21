@@ -20,6 +20,7 @@ local util = require "powershell.util"
 ---@field on_attach? function
 ---@field shell? string
 ---@field handlers table<string, powershell.handler>
+---@field commands table<string, powershell.command>
 ---@field root_dir fun(buf: integer): string
 
 ---@class powershell.openFile
@@ -167,6 +168,7 @@ local function get_lsp_config(buf, session_details)
     settings = config.settings,
     init_options = config.init_options,
     handlers = config.handlers,
+    commands = config.commands,
     root_dir = config.root_dir(buf),
   }
   return lsp_config
