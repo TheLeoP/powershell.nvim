@@ -258,15 +258,14 @@ M.initialize_or_attach = function(buf)
     term_buf = api.nvim_create_buf(true, true)
     api.nvim_buf_call(term_buf, function()
       local cmd = make_cmd(config.bundle_path, config.shell)
-      term_channel = vim.fn.termopen(cmd)
+      term_channel = vim.fn.jobstart(cmd, { term = true })
     end)
   end
 
   local root_dir = config.root_dir(buf)
 
-  local current_session_details = session_details[root_dir]
-  if current_session_details then
-    local lsp_config = get_lsp_config(buf, current_session_details)
+  if session_details[root_dir] then
+    local lsp_config = get_lsp_config(buf, session_details[root_dir])
     if lsp_config then vim.lsp.start(lsp_config, { bufnr = buf }) end
     return
   end

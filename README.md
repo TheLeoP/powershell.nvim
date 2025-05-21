@@ -15,7 +15,7 @@ This extension provides rich PowerShell language support for Neovim. Now you can
 ## Requirements
 
 - [Powershell Editor Services](https://github.com/PowerShell/PowerShellEditorServices) (can be installed manually or using something like [mason.nvim](https://github.com/williamboman/mason.nvim))
-- [Neovim >= 0.10](https://github.com/neovim/neovim/releases/tag/v0.10.0)
+- [Neovim >= 0.11](https://github.com/neovim/neovim/releases/tag/v0.11.0)
 - (Optional) [nvim-dap](https://github.com/mfussenegger/nvim-dap) (needed for debugging)
 
 ## Installation
