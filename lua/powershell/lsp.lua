@@ -5,7 +5,7 @@ local util = require "powershell.util"
 ---@class powershell.user_config
 ---@field bundle_path string
 ---@field init_options table<string, any>|nil
----@field settings powershell.lsp_settings|nil
+---@field settings {powershell: powershell.lsp_settings}|nil
 ---@field capabilities lsp.ClientCapabilities|nil
 ---@field on_attach? function|nil
 ---@field shell? string|nil
@@ -15,7 +15,7 @@ local util = require "powershell.util"
 ---@class powershell.config
 ---@field bundle_path string
 ---@field init_options table<string, any>
----@field settings powershell.lsp_settings
+---@field settings {powershell: powershell.lsp_settings}
 ---@field capabilities lsp.ClientCapabilities
 ---@field on_attach? function
 ---@field shell? string
