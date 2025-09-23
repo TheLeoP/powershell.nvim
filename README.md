@@ -66,7 +66,7 @@ require('powershell').setup({
   shell = "pwsh",
   bundle_path = "",
   feature_flags = {},
-  lsp_log_level = "Normal",
+  lsp_log_level = "Warning",
   capabilities = vim.lsp.protocol.make_client_capabilities(),
   init_options = vim.empty_dict() --[[@as table]],
   settings = vim.empty_dict() --[[@as table]],
