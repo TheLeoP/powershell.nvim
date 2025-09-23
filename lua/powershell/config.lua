@@ -7,11 +7,13 @@ local M = {}
 
 ---@type powershell.config
 M.default_config = {
-  capabilities = vim.lsp.protocol.make_client_capabilities(),
+  shell = "pwsh",
   bundle_path = "",
+  feature_flags = {},
+  lsp_log_level = "Normal",
+  capabilities = vim.lsp.protocol.make_client_capabilities(),
   init_options = vim.empty_dict() --[[@as table]],
   settings = vim.empty_dict() --[[@as table]],
-  shell = "pwsh",
   handlers = base_handlers,
   commands = base_commands,
   root_dir = function(buf)

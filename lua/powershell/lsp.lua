@@ -2,23 +2,29 @@ local api = vim.api
 
 local util = require "powershell.util"
 
+---@alias powershell.LogLevel "Trace" | "Debug" | "Information" | "Warning" | "Error" | "Critical" | "None"
+
 ---@class powershell.user_config
+---@field shell string|nil
 ---@field bundle_path string
+---@field feature_flags string[]|nil
+---@field lsp_log_level powershell.LogLevel|nil
 ---@field init_options table<string, any>|nil
 ---@field settings {powershell: powershell.lsp_settings}|nil
 ---@field capabilities lsp.ClientCapabilities|nil
 ---@field on_attach? function|nil
----@field shell? string|nil
 ---@field handlers table<string, powershell.handler>|nil
 ---@field root_dir nil|fun(buf: integer): string
 
 ---@class powershell.config
+---@field shell string
 ---@field bundle_path string
+---@field feature_flags string[]
+---@field lsp_log_level powershell.LogLevel
 ---@field init_options table<string, any>
 ---@field settings {powershell: powershell.lsp_settings}
 ---@field capabilities lsp.ClientCapabilities
 ---@field on_attach? function
----@field shell? string
 ---@field handlers table<string, powershell.handler>
 ---@field commands table<string, powershell.command>
 ---@field root_dir fun(buf: integer): string
@@ -27,28 +33,9 @@ local util = require "powershell.util"
 ---@field filePath string
 ---@field preview boolean
 
----@class powershell.PowerShellAdditionalExePathSettings[]?
----@field versionName string
----@field exePath string
-
 ---@class powershell.ScriptAnalysisSettings
 ---@field enable boolean?
 ---@field settingsPath string
-
----@class powershell.DebuggingSettings
----@field createTemporaryIntegratedConsole boolean
-
----@class powershell.DeveloperSettings
----@field featureFlags string[]?
----@field powerShellExePath string?
----@field bundledModulesPath string?
----@field editorServicesLogLevel "Diagnostic"|"Verbose"|"Normal"|"Warning"|"Error"
----@field editorServicesWaitForDebugger boolean?
----@field powerShellExeIsWindowsDevBuild boolean?
-
----@class powershell.CodeFoldingSettings
----@field enable boolean?
----@field showLastLine boolean?
 
 ---@class powershell.CodeFormattingSettings
 ---@field autoCorrectAliases boolean?
@@ -70,16 +57,7 @@ local util = require "powershell.util"
 ---@field useConstantStrings boolean?
 ---@field useCorrectCasing boolean?
 
----@class powershell.IntegratedConsoleSettings
----@field showOnStartup boolean?
----@field focusConsoleOnExecute boolean?
----@field executeInCurrentScope boolean?
-
----@class powershell.BugReportingSettings
----@field project string
-
 ---@class powershell.lsp_settings
----@field powerShellAdditionalExePaths powershell.PowerShellAdditionalExePathSettings[]?
 ---@field powerShellDefaultVersion string?
 ---@field powerShellExePath string?
 ---@field bundledModulesPath string?
@@ -88,12 +66,7 @@ local util = require "powershell.util"
 ---@field enableProfileLoading boolean?
 ---@field helpCompletion string?
 ---@field scriptAnalysis powershell.ScriptAnalysisSettings?
----@field debugging powershell.DebuggingSettings?
----@field developer powershell.DeveloperSettings?
----@field codeFolding powershell.CodeFoldingSettings?
 ---@field codeFormatting powershell.CodeFormattingSettings?
----@field integratedConsole powershell.IntegratedConsoleSettings?
----@field bugReporting powershell.BugReportingSettings?
 
 ---@class powershell
 local M = {}
@@ -125,27 +98,26 @@ local temp_path = vim.fn.stdpath "cache"
 local session_file_path = ("%s/powershell_es.session.json"):format(temp_path)
 vim.fn.delete(session_file_path)
 
----@param bundle_path string
+---@param config powershell.config
 ---@param shell string
 ---@return string[]
-local function make_cmd(bundle_path, shell)
+local function make_cmd(config, shell)
   --stylua: ignore
   return {
     shell,
     "-NoProfile",
-    "-NonInteractive", ("%s/PowerShellEditorServices/Start-EditorServices.ps1"):format(bundle_path),
+    "-NonInteractive", ("%s/PowerShellEditorServices/Start-EditorServices.ps1"):format(config.bundle_path),
     "-HostName", "nvim",
     "-HostProfileId", "Neovim",
     "-HostVersion", "1.0.0",
     "-LogPath", ("%s/powershell_es.log"):format(temp_path),
-    -- TODO: make this configurable
-    "-LogLevel", "Normal",
-    "-BundledModulesPath", ("%s"):format(bundle_path),
+    "-LogLevel", config.lsp_log_level,
+    "-BundledModulesPath", config.bundle_path,
     "-LanguageServiceOnly",
     "-EnableConsoleRepl",
     "-SessionDetailsPath", session_file_path,
     "-AdditionalModules", "@()",
-    "-FeatureFlags", "@()",
+    "-FeatureFlags", ("@(%s)"):format(table.concat(config.feature_flags, ', ')),
   }
 end
 
@@ -259,7 +231,7 @@ M.initialize_or_attach = function(buf)
   if not term_buf or not term_channel then
     term_buf = api.nvim_create_buf(true, true)
     api.nvim_buf_call(term_buf, function()
-      local cmd = make_cmd(config.bundle_path, config.shell)
+      local cmd = make_cmd(config, config.shell)
       term_channel = vim.fn.jobstart(cmd, { term = true })
     end)
   end

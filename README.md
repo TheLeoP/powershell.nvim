@@ -63,14 +63,18 @@ require('powershell').setup({
 ```lua
 -- This is the default configuration
 require('powershell').setup({
-  capabilities = vim.lsp.protocol.make_client_capabilities(),
-  bundle_path = "",
-  init_options = vim.empty_dict(),
-  settings = vim.empty_dict(),
   shell = "pwsh",
+  bundle_path = "",
+  feature_flags = {},
+  lsp_log_level = "Normal",
+  capabilities = vim.lsp.protocol.make_client_capabilities(),
+  init_options = vim.empty_dict() --[[@as table]],
+  settings = vim.empty_dict() --[[@as table]],
   handlers = base_handlers, -- see lua/powershell/handlers.lua
+  commands = base_commands, -- see lua/powershell/commands.lua
   root_dir = function(buf)
-    return fs.dirname(fs.find({ ".git" }, { upward = true, path = fs.dirname(api.nvim_buf_get_name(buf)) })[1])
+    local current_file_dir = fs.dirname(api.nvim_buf_get_name(buf))
+    return fs.dirname(fs.find({ ".git" }, { upward = true, path = current_file_dir })[1]) or current_file_dir
   end,
 })
 ```
