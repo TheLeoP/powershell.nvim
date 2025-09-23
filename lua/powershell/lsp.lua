@@ -276,6 +276,13 @@ M.initialize_or_attach = function(buf)
       end)
     end)
     local term_channel = coroutine.yield() ---@type integer
+    api.nvim_exec_autocmds("User", {
+      pattern = "powershell.nvim-term",
+      data = {
+        channel = term_channel,
+        buf = term_buf,
+      },
+    })
 
     util.wait_for_session_file(
       session_file_path,

@@ -90,11 +90,25 @@ require('powershell').toggle_term()
 To create a keymap only for powershell files, put the following in your config.
 
 ```lua
--- this should go in ~/.config/nvim/ftplugin/ps1.lua
+-- this should go in `~/.config/nvim/ftplugin/ps1.lua` or inside a `FileType` autocmd
 vim.keymap.set("n", "<leader>P", function() require("powershell").toggle_term() end)
 ```
 
-You could also use a filetype autocmd to create the keymap.
+If you also want to create the toggle keymap inside the Powershell Extension Terminal buffer, put the following in your config.
+
+```lua
+-- this should go anywhere in your config. For example in your `init.lua` or next to the `require('powershell').setup()` call
+local augroup = vim.api.nvim_create_augroup("personal-powershell", { clear = true })
+vim.api.nvim_create_autocmd("User", {
+  group = augroup,
+  pattern = "powershell.nvim-term",
+  callback = function(opts)
+    vim.keymap.set("n", "<leader>P", function()
+      require("powershell").toggle_term()
+    end, { buffer = opts.data.buf })
+  end,
+})
+```
 
 ### Eval expression on Powershell Extension Terminal
 
@@ -107,11 +121,9 @@ require('powershell').eval()
 To create a keymap only for powershell files, put the following in your config.
 
 ```lua
--- this should go in ~/.config/nvim/ftplugin/ps1.lua
+-- this should go in `~/.config/nvim/ftplugin/ps1.lua` or inside a `FileType` autocmd
 vim.keymap.set({ "n", "x" }, "<leader>E", function() require("powershell").eval() end)
 ```
-
-You could also use a filetype autocmd to create the keymap.
 
 ## DAP
 
