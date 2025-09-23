@@ -4,48 +4,35 @@ local M = {}
 
 M.noop = function() end
 
----@type table<integer, integer>
-M.term_bufs = {}
---- client id -> term_win
----@type table<integer, integer>
-M.term_wins = {}
---- client id -> term_channel
----@type table<integer, integer>
-M.term_channels = {}
+-- client_id -> term_info
+---@type {[integer]: {buf: integer, channel: integer}}
+M.terms = {}
+
 --- bufnr -> client id
 ---@type table<integer, integer>
 M.clients_id = {}
 
 ---@param buf integer
----@return integer client_id for current buf
+---@return integer|nil client_id
 M.client_id = function(buf)
   local client_id = M.clients_id[buf]
   return client_id
 end
 
 ---@param buf integer
----@return integer term_win for current buf
-M.term_win = function(buf)
+---@return integer|nil term_buf
+M.term_buf = function(buf)
   local client_id = M.clients_id[buf]
-  local term_win = M.term_wins[client_id]
-  return term_win
+  local term = M.terms[client_id]
+  return term and term.buf or nil
 end
 
 ---@param buf integer
----@return integer|nil term_buf for current buf
-M.term_buf = function(buf)
-  -- TODO: check before accessing
+---@return integer|nil term_buf
+M.term_channel = function(buf)
   local client_id = M.clients_id[buf]
-  local term_buf = M.term_bufs[client_id]
-  return term_buf
-end
-
----@param client_id integer
----@return integer|nil term_buf for current buf
-M.term_channel = function(client_id)
-  -- TODO: check before accessing
-  local term_channel = M.term_channels[client_id]
-  return term_channel
+  local term = M.terms[client_id]
+  return term and term.channel or nil
 end
 
 ---@type powershell.extension_command[]

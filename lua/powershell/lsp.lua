@@ -1,4 +1,5 @@
 local api = vim.api
+local iter = vim.iter
 
 local util = require "powershell.util"
 
@@ -156,7 +157,10 @@ end
 
 --- root_dir -> sesssion_details
 ---@type table<string, powershell.session_details>
-local session_details = {}
+local all_session_details = {}
+--- root_dir -> is_pending
+---@type {[string]: boolean}
+local is_pending = {}
 
 ---@class powershell.lsp.dispatchers
 ---@field notification function
@@ -172,15 +176,18 @@ local session_details = {}
 
 ---@return boolean
 function M.is_term_open()
-  local buf = api.nvim_get_current_buf()
-  local term_win = util.term_win(buf)
+  local current_buf = api.nvim_get_current_buf()
+  local term_buf = util.term_buf(current_buf)
+  local term_win = iter(api.nvim_tabpage_list_wins(0)):find(function(win)
+    local buf = api.nvim_win_get_buf(win)
+    return buf == term_buf
+  end)
   if not term_win then return false end
 
   local win_type = vim.fn.win_gettype(term_win)
 
   -- empty string window type corresponds to a normal window
-  local win_open = win_type == "" or win_type == "popup"
-  return win_open and api.nvim_win_get_buf(term_win) == util.term_buf(buf)
+  return win_type == "" or win_type == "popup"
 end
 
 M.open_term = function()
@@ -193,16 +200,18 @@ M.open_term = function()
   --TODO: make this configurable
   vim.cmd.split()
   api.nvim_set_current_buf(term_bufnr)
-  local term_win = api.nvim_get_current_win()
-  util.term_wins[client] = term_win
 
   -- To toggle when inside terminal window
   if not util.clients_id[term_bufnr] then util.clients_id[term_bufnr] = client end
 end
 
 function M.close_term()
-  local buf = api.nvim_get_current_buf()
-  local term_win = util.term_win(buf)
+  local current_buf = api.nvim_get_current_buf()
+  local term_buf = util.term_buf(current_buf)
+  local term_win = iter(api.nvim_tabpage_list_wins(0)):find(function(win)
+    local buf = api.nvim_win_get_buf(win)
+    return buf == term_buf
+  end)
   if not term_win then return vim.notify("Powershell.nvim: there is no terminal window", vim.log.levels.ERROR) end
 
   api.nvim_win_close(term_win, true)
@@ -216,48 +225,84 @@ M.toggle_term = function()
   end
 end
 
+local session_details_pattern = "powershell.nvim-session_details-%s"
 ---@param buf integer
 M.initialize_or_attach = function(buf)
   if vim.bo[buf].buftype == "nofile" then return end
 
   local bufname = api.nvim_buf_get_name(buf)
-  if #bufname == 0 then return end
+  if bufname == "" then return end
 
   local config = require("powershell.config").config
-  local term_buf = util.term_buf(buf)
-
-  local client_id = util.clients_id[buf]
-  local term_channel = util.term_channels[client_id]
-  if not term_buf or not term_channel then
-    term_buf = api.nvim_create_buf(true, true)
-    api.nvim_buf_call(term_buf, function()
-      local cmd = make_cmd(config, config.shell)
-      term_channel = vim.fn.jobstart(cmd, { term = true })
-    end)
-  end
-
   local root_dir = config.root_dir(buf)
 
-  if session_details[root_dir] then
-    local lsp_config = get_lsp_config(buf, session_details[root_dir])
-    if lsp_config then vim.lsp.start(lsp_config, { bufnr = buf }) end
+  if not is_pending[root_dir] then
+    is_pending[root_dir] = true
+  else
+    api.nvim_create_autocmd("User", {
+      pattern = session_details_pattern:format(root_dir),
+      callback = function(opts)
+        local session_details = opts.data.session_details
+        local lsp_config = get_lsp_config(buf, session_details)
+        if not lsp_config then return end
+        local client = vim.lsp.start(lsp_config, { bufnr = buf })
+        util.clients_id[buf] = client
+      end,
+      once = true,
+    })
     return
   end
 
-  util.wait_for_session_file(session_file_path, function(current_session_details, error_msg)
-    if error_msg then return vim.notify(error_msg, vim.log.levels.ERROR) end
+  local session_details = all_session_details[root_dir]
+  if session_details then
+    local lsp_config = get_lsp_config(buf, session_details)
+    if not lsp_config then return end
+    local client = vim.lsp.start(lsp_config, { bufnr = buf })
+    util.clients_id[buf] = client
+    return
+  end
 
+  local client_id = util.clients_id[buf]
+  assert(not client_id)
+  local term_buf = api.nvim_create_buf(true, true)
+  local cmd = make_cmd(config, config.shell)
+
+  coroutine.wrap(function()
+    local co = coroutine.running()
+    vim.schedule(function()
+      api.nvim_buf_call(term_buf, function()
+        local term_channel = vim.fn.jobstart(cmd, { term = true })
+        coroutine.resume(co, term_channel)
+      end)
+    end)
+    local term_channel = coroutine.yield() ---@type integer
+
+    util.wait_for_session_file(
+      session_file_path,
+      function(current_session_details, error_msg) coroutine.resume(co, current_session_details, error_msg) end
+    )
+    local current_session_details, error_msg = coroutine.yield() ---@type powershell.session_details?, string?
+
+    if error_msg then return vim.notify(error_msg, vim.log.levels.ERROR) end
+    ---@cast current_session_details -nil
+
+    is_pending[root_dir] = nil
+    api.nvim_exec_autocmds("User", {
+      pattern = session_details_pattern:format(root_dir),
+      data = {
+        session_details = current_session_details,
+      },
+    })
     local lsp_config = get_lsp_config(buf, current_session_details)
     if not lsp_config then return end
 
     local client = vim.lsp.start(lsp_config, { bufnr = buf })
     if not client then return vim.notify("LSP client has not been initialized", vim.log.levels.ERROR) end
 
-    session_details[root_dir] = current_session_details
+    all_session_details[root_dir] = current_session_details
     util.clients_id[buf] = client
-    util.term_bufs[client] = term_buf
-    util.term_channels[client] = term_channel
-  end)
+    util.terms[client] = { buf = term_buf, channel = term_channel }
+  end)()
 end
 
 M.eval = function()
@@ -270,7 +315,7 @@ M.eval = function()
     )
     return
   end
-  local term_channel = assert(util.term_channels[client_id])
+  local term_channel = assert(util.term_channel(buf))
 
   local mode = api.nvim_get_mode().mode
   ---@type string[]?

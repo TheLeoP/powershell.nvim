@@ -187,7 +187,7 @@ end
 M["editor/clearTerminal"] = function(err, result, ctx)
   if err then return end
 
-  local term_channel = assert(util.term_channel(ctx.client_id))
+  local term_channel = assert(util.term_channel(ctx.bufnr))
   api.nvim_chan_send(term_channel, "[System.Console]::Clear()\r")
 end
 

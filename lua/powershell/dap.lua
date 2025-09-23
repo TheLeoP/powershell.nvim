@@ -1,9 +1,8 @@
-local api = vim.api
 local util = require "powershell.util"
 
 local M = {}
 
--- TODO: modify to allow multiple different seession_files
+-- TODO: modify to allow multiple different session_files
 local temp_path = vim.fn.stdpath "cache"
 local session_file_path = ("%s/powershell_es.temp_session.json"):format(temp_path)
 session_file_path = vim.fs.normalize(session_file_path)
