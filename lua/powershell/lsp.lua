@@ -264,7 +264,7 @@ M.initialize_or_attach = function(buf)
 
   local client_id = util.clients_id[buf]
   assert(not client_id)
-  local term_buf = api.nvim_create_buf(true, true)
+  local term_buf = api.nvim_create_buf(true, false)
   local cmd = make_cmd(config, config.shell)
 
   coroutine.wrap(function()
