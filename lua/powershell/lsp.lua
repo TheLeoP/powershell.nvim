@@ -236,6 +236,15 @@ M.initialize_or_attach = function(buf)
   local config = require("powershell.config").config
   local root_dir = config.root_dir(buf)
 
+  local session_details = all_session_details[root_dir]
+  if session_details then
+    local lsp_config = get_lsp_config(buf, session_details)
+    if not lsp_config then return end
+    local client = vim.lsp.start(lsp_config, { bufnr = buf })
+    util.clients_id[buf] = client
+    return
+  end
+
   if not is_pending[root_dir] then
     is_pending[root_dir] = true
   else
@@ -250,15 +259,6 @@ M.initialize_or_attach = function(buf)
       end,
       once = true,
     })
-    return
-  end
-
-  local session_details = all_session_details[root_dir]
-  if session_details then
-    local lsp_config = get_lsp_config(buf, session_details)
-    if not lsp_config then return end
-    local client = vim.lsp.start(lsp_config, { bufnr = buf })
-    util.clients_id[buf] = client
     return
   end
 
