@@ -1,4 +1,4 @@
-*powershell.nvim.txt*    For Neovim >= 0.10.0   Last change: 2025 September 23
+*powershell.nvim.txt*     For Neovim >= 0.10.0    Last change: 2025 October 13
 
 ==============================================================================
 Table of Contents                          *powershell.nvim-table-of-contents*
@@ -195,8 +195,8 @@ By default, the plugin includes the following nvim-dap
 
 To use them, simply call `require('dap').continue()` inside of a `ps1` file.
 
-**NOTE**currently, debugging does not support launching an integrated terminal
-because of PowerShell/PowerShellEditorServices#2164
+**NOTE**: currently, debugging does not support launching an integrated
+terminal because of PowerShell/PowerShellEditorServices#2164
 <https://github.com/PowerShell/PowerShellEditorServices/issues/2164>
 
 
