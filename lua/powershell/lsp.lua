@@ -309,6 +309,17 @@ M.initialize_or_attach = function(buf)
     all_session_details[root_dir] = current_session_details
     util.clients_id[buf] = client
     util.terms[client] = { buf = term_buf, channel = term_channel }
+    api.nvim_create_autocmd("LspDetach", {
+      callback = function(opts)
+        if opts.data.client_id == client then
+          all_session_details[root_dir] = nil
+          util.clients_id[buf] = nil
+          util.terms[client] = nil
+
+          return true
+        end
+      end,
+    })
   end)()
 end
 
