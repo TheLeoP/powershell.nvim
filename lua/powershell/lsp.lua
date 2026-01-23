@@ -245,9 +245,7 @@ M.initialize_or_attach = function(buf)
     return
   end
 
-  if not is_pending[root_dir] then
-    is_pending[root_dir] = true
-  else
+  if is_pending[root_dir] then
     api.nvim_create_autocmd("User", {
       pattern = session_details_pattern:format(root_dir),
       callback = function(opts)
@@ -261,7 +259,9 @@ M.initialize_or_attach = function(buf)
     })
     return
   end
+  is_pending[root_dir] = true
 
+  ---@type integer?
   local client_id = util.clients_id[buf]
   assert(not client_id)
   local term_buf = api.nvim_create_buf(false, false)
@@ -303,22 +303,27 @@ M.initialize_or_attach = function(buf)
     local lsp_config = get_lsp_config(buf, current_session_details)
     if not lsp_config then return end
 
-    local client = vim.lsp.start(lsp_config, { bufnr = buf })
-    if not client then return vim.notify("LSP client has not been initialized", vim.log.levels.ERROR) end
+    client_id = vim.lsp.start(lsp_config, { bufnr = buf })
+    if not client_id then return vim.notify("LSP client has not been initialized", vim.log.levels.ERROR) end
 
     all_session_details[root_dir] = current_session_details
-    util.clients_id[buf] = client
-    util.terms[client] = { buf = term_buf, channel = term_channel }
+    util.clients_id[buf] = client_id
+    util.terms[client_id] = { buf = term_buf, channel = term_channel }
     api.nvim_create_autocmd("LspDetach", {
       callback = function(opts)
-        if opts.data.client_id == client then
-          all_session_details[root_dir] = nil
-          util.clients_id[buf] = nil
-          util.terms[client] = nil
+        if opts.data.client_id == client_id then
+          util.clients_id[opts.buf] = nil
+          util.terms[client_id] = nil
+
+          local client = vim.lsp.get_client_by_id(client_id)
+          if not client then return end
+          local attached_buffers = iter(pairs(client.attached_buffers)):map(function(buf) return buf end):totable()
+          if #attached_buffers == 0 then all_session_details[root_dir] = nil end
 
           return true
         end
       end,
+      buffer = buf,
     })
   end)()
 end
