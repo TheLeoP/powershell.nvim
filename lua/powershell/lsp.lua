@@ -97,7 +97,6 @@ end
 -- TODO: modify to allow multiple different seession_files
 local temp_path = vim.fn.stdpath "cache"
 local session_file_path = ("%s/powershell_es.session.json"):format(temp_path)
-vim.fn.delete(session_file_path)
 
 ---@param config powershell.config
 ---@param shell string

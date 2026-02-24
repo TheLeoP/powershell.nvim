@@ -105,7 +105,9 @@ function M.wait_for_session_file(file_path, callback)
       end
       local session_file = vim.json.decode(f:read "*a")
       f:close()
-      vim.fn.delete(file_path)
+      if vim.fn.delete(file_path) == -1 then
+        vim.notify(("Powershell.nvim: file `%s` couldn't be deleted"):format(file_path), vim.log.levels.WARN)
+      end
 
       callback(session_file)
     end

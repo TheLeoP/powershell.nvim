@@ -8,7 +8,6 @@ local session_file_path = ("%s/powershell_es.temp_session.json"):format(temp_pat
 session_file_path = vim.fs.normalize(session_file_path)
 local log_file_path = ("%s/powershell_es.temp.log"):format(temp_path)
 log_file_path = vim.fs.normalize(log_file_path)
-vim.fn.delete(session_file_path)
 
 ---@param config powershell.config
 ---@return string[]
