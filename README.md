@@ -91,7 +91,7 @@ To create a keymap only for powershell files, put the following in your config.
 
 ```lua
 -- this should go in `~/.config/nvim/ftplugin/ps1.lua` or inside a `FileType` autocmd
-vim.keymap.set("n", "<leader>P", function() require("powershell").toggle_term() end)
+vim.keymap.set("n", "<leader>lt", function() require("powershell").toggle_term() end)
 ```
 
 If you also want to create the toggle keymap inside the Powershell Extension Terminal buffer, put the following in your config.
@@ -103,7 +103,7 @@ vim.api.nvim_create_autocmd("User", {
   group = augroup,
   pattern = "powershell.nvim-term",
   callback = function(opts)
-    vim.keymap.set("n", "<leader>P", function()
+    vim.keymap.set("n", "<leader>lt", function()
       require("powershell").toggle_term()
     end, { buffer = opts.data.buf })
   end,
@@ -122,7 +122,38 @@ To create a keymap only for powershell files, put the following in your config.
 
 ```lua
 -- this should go in `~/.config/nvim/ftplugin/ps1.lua` or inside a `FileType` autocmd
-vim.keymap.set({ "n", "x" }, "<leader>E", function() require("powershell").eval() end)
+vim.keymap.set({ "n", "x" }, "<leader>le", function() require("powershell").eval() end)
+
+
+```
+
+### Toggle Powershell Debug Terminal
+
+```lua
+require('powershell').toggle_debug_term()
+```
+
+To create a keymap only for powershell files, put the following in your config.
+
+```lua
+-- this should go in `~/.config/nvim/ftplugin/ps1.lua` or inside a `FileType` autocmd
+vim.keymap.set("n", "<leader>ld", function() require("powershell").toggle_debug_term() end)
+```
+
+If you also want to create the toggle keymap inside the Powershell Debug Terminal buffer, put the following in your config.
+
+```lua
+-- this should go anywhere in your config. For example in your `init.lua` or next to the `require('powershell').setup()` call
+local augroup = vim.api.nvim_create_augroup("personal-powershell", { clear = true })
+vim.api.nvim_create_autocmd("User", {
+  group = augroup,
+  pattern = "powershell.nvim-debug_term",
+  callback = function(opts)
+    vim.keymap.set("n", "<leader>ld", function()
+      require("powershell").toggle_term()
+    end, { buffer = opts.data.buf })
+  end,
+})
 ```
 
 ## DAP
@@ -160,8 +191,6 @@ dap.configurations.ps1 = {
 ```
 
 To use them, simply call `require('dap').continue()` inside of a `ps1` file.
-
-**NOTE**: currently, debugging does not support launching an integrated terminal because of [PowerShell/PowerShellEditorServices#2164](https://github.com/PowerShell/PowerShellEditorServices/issues/2164)
 
 ## TODO
 

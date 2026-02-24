@@ -97,25 +97,31 @@ end
 -- TODO: modify to allow multiple different seession_files
 local temp_path = vim.fn.stdpath "cache"
 local session_file_path = ("%s/powershell_es.session.json"):format(temp_path)
+session_file_path = vim.fs.normalize(session_file_path)
+local log_file_path = ("%s/powershell_es.log"):format(temp_path)
+log_file_path = vim.fs.normalize(log_file_path)
 
 ---@param config powershell.config
 ---@return string[]
 local function make_cmd(config)
+  local file = ("%s/PowerShellEditorServices/Start-EditorServices.ps1"):format(config.bundle_path)
+  file = vim.fs.normalize(file)
   --stylua: ignore
   return {
     config.shell,
+    "-NoLogo",
     "-NoProfile",
-    "-NonInteractive", ("%s/PowerShellEditorServices/Start-EditorServices.ps1"):format(config.bundle_path),
+    "-NonInteractive",
+    "-File", file,
     "-HostName", "nvim",
     "-HostProfileId", "Neovim",
     "-HostVersion", "1.0.0",
-    "-LogPath", ("%s/powershell_es.log"):format(temp_path),
+    "-LogPath", log_file_path,
     "-LogLevel", config.lsp_log_level,
     "-BundledModulesPath", config.bundle_path,
     "-LanguageServiceOnly",
     "-EnableConsoleRepl",
     "-SessionDetailsPath", session_file_path,
-    "-AdditionalModules", "@()",
     "-FeatureFlags", ("@(%s)"):format(table.concat(config.feature_flags, ', ')),
   }
 end
@@ -153,9 +159,6 @@ end
 ---@field powerShellVersion string?
 ---@field status string?
 
---- root_dir -> sesssion_details
----@type table<string, powershell.session_details>
-local all_session_details = {}
 --- root_dir -> is_pending
 ---@type {[string]: boolean}
 local is_pending = {}
@@ -189,11 +192,13 @@ function M.is_term_open()
 end
 
 M.open_term = function()
-  local bufnr = api.nvim_get_current_buf()
-  local term_bufnr = util.term_buf(bufnr)
-  if not term_bufnr then return vim.notify("Powershell.nvim: there is no terminal buffer", vim.log.levels.ERROR) end
+  local buf = api.nvim_get_current_buf()
+  local term_bufnr = util.term_buf(buf)
+  if not term_bufnr then
+    return vim.notify("Powershell.nvim: there is no terminal buffer for current buffer", vim.log.levels.ERROR)
+  end
 
-  local client = util.clients_id[bufnr]
+  local client = util.clients_id[buf]
 
   --TODO: make this configurable
   vim.cmd.split()
@@ -210,7 +215,9 @@ function M.close_term()
     local buf = api.nvim_win_get_buf(win)
     return buf == term_buf
   end)
-  if not term_win then return vim.notify("Powershell.nvim: there is no terminal window", vim.log.levels.ERROR) end
+  if not term_win then
+    return vim.notify("Powershell.nvim: there is no terminal window for current buffer", vim.log.levels.ERROR)
+  end
 
   api.nvim_win_close(term_win, true)
 end
@@ -223,7 +230,6 @@ M.toggle_term = function()
   end
 end
 
-local session_details_pattern = "powershell.nvim-session_details-%s"
 ---@param buf integer
 M.initialize_or_attach = function(buf)
   if vim.bo[buf].buftype == "nofile" then return end
@@ -234,7 +240,7 @@ M.initialize_or_attach = function(buf)
   local config = require("powershell.config").config
   local root_dir = config.root_dir(buf)
 
-  local session_details = all_session_details[root_dir]
+  local session_details = util.all_session_details[root_dir]
   if session_details then
     local lsp_config = get_lsp_config(buf, session_details)
     if not lsp_config then return end
@@ -245,7 +251,7 @@ M.initialize_or_attach = function(buf)
 
   if is_pending[root_dir] then
     api.nvim_create_autocmd("User", {
-      pattern = session_details_pattern:format(root_dir),
+      pattern = util.session_details_pattern:format(root_dir),
       callback = function(opts)
         local session_details = opts.data.session_details
         local lsp_config = get_lsp_config(buf, session_details)
@@ -293,7 +299,7 @@ M.initialize_or_attach = function(buf)
 
     is_pending[root_dir] = nil
     api.nvim_exec_autocmds("User", {
-      pattern = session_details_pattern:format(root_dir),
+      pattern = util.session_details_pattern:format(root_dir),
       data = {
         session_details = current_session_details,
       },
@@ -304,7 +310,7 @@ M.initialize_or_attach = function(buf)
     client_id = vim.lsp.start(lsp_config, { bufnr = buf })
     if not client_id then return vim.notify("LSP client has not been initialized", vim.log.levels.ERROR) end
 
-    all_session_details[root_dir] = current_session_details
+    util.all_session_details[root_dir] = current_session_details
     util.clients_id[buf] = client_id
     util.terms[client_id] = { buf = term_buf, channel = term_channel }
     api.nvim_create_autocmd("LspDetach", {
@@ -316,7 +322,7 @@ M.initialize_or_attach = function(buf)
           local client = vim.lsp.get_client_by_id(client_id)
           if not client then return end
           local attached_buffers = iter(pairs(client.attached_buffers)):map(function(buf) return buf end):totable()
-          if #attached_buffers == 0 then all_session_details[root_dir] = nil end
+          if #attached_buffers == 0 then util.all_session_details[root_dir] = nil end
 
           return true
         end

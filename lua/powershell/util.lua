@@ -115,4 +115,10 @@ function M.wait_for_session_file(file_path, callback)
   inner_try_func(60, 500)
 end
 
+--- root_dir -> sesssion_details
+---@type table<string, powershell.session_details>
+M.all_session_details = {}
+
+M.session_details_pattern = "powershell.nvim-session_details-%s"
+
 return M
