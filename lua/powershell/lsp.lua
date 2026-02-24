@@ -322,7 +322,10 @@ M.initialize_or_attach = function(buf)
           local client = vim.lsp.get_client_by_id(client_id)
           if not client then return end
           local attached_buffers = iter(pairs(client.attached_buffers)):map(function(buf) return buf end):totable()
-          if #attached_buffers == 0 then util.all_session_details[root_dir] = nil end
+          if #attached_buffers == 1 and attached_buffers[1] == opts.buf then
+            util.all_session_details[root_dir] = nil
+            vim.schedule(function() api.nvim_buf_delete(term_buf, { force = true }) end)
+          end
 
           return true
         end
