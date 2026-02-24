@@ -99,12 +99,11 @@ local temp_path = vim.fn.stdpath "cache"
 local session_file_path = ("%s/powershell_es.session.json"):format(temp_path)
 
 ---@param config powershell.config
----@param shell string
 ---@return string[]
-local function make_cmd(config, shell)
+local function make_cmd(config)
   --stylua: ignore
   return {
-    shell,
+    config.shell,
     "-NoProfile",
     "-NonInteractive", ("%s/PowerShellEditorServices/Start-EditorServices.ps1"):format(config.bundle_path),
     "-HostName", "nvim",
@@ -264,7 +263,7 @@ M.initialize_or_attach = function(buf)
   local client_id = util.clients_id[buf]
   assert(not client_id)
   local term_buf = api.nvim_create_buf(false, false)
-  local cmd = make_cmd(config, config.shell)
+  local cmd = make_cmd(config)
 
   coroutine.wrap(function()
     local co = coroutine.running()

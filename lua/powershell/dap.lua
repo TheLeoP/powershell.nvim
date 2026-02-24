@@ -11,12 +11,12 @@ log_file_path = vim.fs.normalize(log_file_path)
 
 ---@param config powershell.config
 ---@return string[]
-local function make_cmd(config, shell)
+local function make_cmd(config)
   local file = ("%s/PowerShellEditorServices/Start-EditorServices.ps1"):format(config.bundle_path)
   file = vim.fs.normalize(file)
   --stylua: ignore
   return {
-    shell,
+    config.shell,
     "-NoLogo",
     "-NoProfile",
     "-NonInteractive",
@@ -28,8 +28,7 @@ local function make_cmd(config, shell)
     "-LogLevel", config.lsp_log_level,
     "-BundledModulesPath", config.bundle_path,
     "-DebugServiceOnly",
-    -- TODO: wait for response on https://github.com/PowerShell/PowerShellEditorServices/issues/2164
-    -- "-EnableConsoleRepl",
+    "-EnableConsoleRepl",
     "-SessionDetailsPath", session_file_path,
   }
 end
@@ -39,7 +38,7 @@ function M.setup()
   local config = require("powershell.config").config
 
   dap.adapters.ps1 = function(on_config)
-    local cmd = make_cmd(config, config.shell)
+    local cmd = make_cmd(config)
     vim.system(cmd)
     util.wait_for_session_file(session_file_path, function(current_session_details, error_msg)
       if error_msg then return vim.notify(error_msg, vim.log.levels.ERROR) end
