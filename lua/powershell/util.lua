@@ -64,7 +64,8 @@ M.get_editor_context = function(has_range)
     currentFileContent = table.concat(api.nvim_buf_get_lines(0, 0, -1, true), "\n"),
     currentFileLanguage = vim.bo[0].filetype,
     currentFilePath = vim.fs.normalize(vim.api.nvim_buf_get_name(0)),
-    cursorPosition = { character = col, line = row },
+    -- $psEditor API expects 0-based col and 0-based row
+    cursorPosition = { character = col, line = row - 1 },
     selectionRange = selectionRange,
   }
   return context
