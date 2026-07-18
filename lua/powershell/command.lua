@@ -1,5 +1,5 @@
 local api = vim.api
-local i = vim.iter
+local iter = vim.iter
 
 ---@class powershell.editor_context
 ---@field currentFileContent string
@@ -22,7 +22,7 @@ local complete = function(arg_lead, cmd_line, _cursor_pos)
   local number_of_arguments = #vim.split(cmd_line, " ")
   if number_of_arguments > 2 then return {} end
 
-  return i(util.extension_commands)
+  return iter(util.extension_commands)
     :map(function(command) return command.name end)
     :filter(function(name) return vim.startswith(name, arg_lead) end)
     :totable()
@@ -35,7 +35,9 @@ M.create = function()
     ---@param opts powershell.command_opts
     function(opts)
       local command = opts.fargs[1]
-      if not i(util.extension_commands):map(function(_command) return _command.name end):find(command) then return end
+      if not iter(util.extension_commands):map(function(c) return c.name end):find(command) then
+        return vim.notify(("The command %s is not registered"):format(command), vim.log.levels.ERROR)
+      end
 
       local buf = api.nvim_get_current_buf()
       local client_id = assert(util.client_id(buf))
