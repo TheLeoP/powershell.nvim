@@ -191,4 +191,11 @@ M["editor/clearTerminal"] = function(err, result, ctx)
   api.nvim_chan_send(term_channel, "[System.Console]::Clear()\r")
 end
 
+M["powerShell/sendKeyPress"] = function(err, result, ctx)
+  if err then return end
+
+  local term = require("powershell.util").terms[ctx.client_id]
+  api.nvim_chan_send(term.channel, "p")
+end
+
 return M
