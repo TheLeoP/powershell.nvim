@@ -369,7 +369,7 @@ M.eval = function()
 
   -- TODO: wait for response on https://github.com/PowerShell/PowerShellEditorServices/issues/2164
   -- local client = assert(vim.lsp.get_client_by_id(client_id))
-  -- client.request("evaluate", { expression = text }, util.noop, 0)
+  -- client:request("evaluate", { expression = text }, util.noop, 0)
 end
 
 return M

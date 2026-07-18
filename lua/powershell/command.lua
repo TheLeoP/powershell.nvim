@@ -38,10 +38,10 @@ M.create = function()
       if not i(util.extension_commands):map(function(_command) return _command.name end):find(command) then return end
 
       local buf = api.nvim_get_current_buf()
-      local client_id = util.client_id(buf)
+      local client_id = assert(util.client_id(buf))
       local client = assert(vim.lsp.get_client_by_id(client_id))
       local context = util.get_editor_context(opts.range ~= 0)
-      client.request("powerShell/invokeExtensionCommand", { name = command, Context = context }, util.noop, 0)
+      client:request("powerShell/invokeExtensionCommand", { name = command, Context = context }, util.noop, 0)
     end,
     {
       nargs = "+",
