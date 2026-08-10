@@ -366,4 +366,26 @@ M.eval = function()
   client:request("evaluate", { expression = table.concat(lines, "\n") }, util.noop, 0)
 end
 
+function M._eval_operator_implementation(type)
+  local buf = api.nvim_get_current_buf()
+  local client_id = util.clients_id[buf]
+  if not client_id then
+    return vim.notify(
+      "There is no LSP client initialized by powershell.nvim attached to the current buffer.",
+      vim.log.levels.WARN
+    )
+  end
+
+  local range_type = type == "line" and "V" or type == "char" and "v" or ""
+  local lines = vim.fn.getregion(vim.fn.getpos "'[", vim.fn.getpos "']", { type = range_type })
+
+  local client = assert(vim.lsp.get_client_by_id(client_id))
+  client:request("evaluate", { expression = table.concat(lines, "\n") }, util.noop, 0)
+end
+
+function M.eval_operator()
+  vim.o.operatorfunc = "v:lua.require'powershell.lsp'._eval_operator_implementation"
+  return "g@"
+end
+
 return M

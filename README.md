@@ -112,19 +112,17 @@ vim.api.nvim_create_autocmd("User", {
 
 ### Eval expression on Powershell Extension Terminal
 
-Can be used both in normal (evaluates current line) and visual mode (evaluates visual selection).
-
-```lua
-require('powershell').eval()
-```
+`require('powershell').eval_operator()` is a Neovim operator (checkout `:h operator` for more information) just like the builtin `d` or `c`. This means that it can be used in both normal (waits for a motion or textobject) or visual mode (operates on current visual selection)
 
 To create a keymap only for powershell files, put the following in your config.
 
 ```lua
 -- this should go in `~/.config/nvim/ftplugin/ps1.lua` or inside a `FileType` autocmd
-vim.keymap.set({ "n", "x" }, "<leader>le", function() require("powershell").eval() end)
+-- IMPORTANT: don't forget to create the keymap with `expr = true` and return the result of `require('powershell').eval_operator()`
+vim.keymap.set({ "n", "x" }, "g=", function() return require("powershell").eval_operator() end, { expr = true })
 
-
+-- to make `g==` operate in the current like just like builtin `dd` or `cc`
+vim.keymap.set({ "n" }, "g==", function() return require("powershell").eval_operator() .. "_" end, { expr = true })
 ```
 
 ### Toggle Powershell Debug Terminal
