@@ -339,13 +339,11 @@ M.eval = function()
   local buf = api.nvim_get_current_buf()
   local client_id = util.clients_id[buf]
   if not client_id then
-    vim.notify(
+    return vim.notify(
       "There is no LSP client initialized by powershell.nvim attached to the current buffer.",
       vim.log.levels.WARN
     )
-    return
   end
-  local term_channel = assert(util.term_channel(buf))
 
   local mode = api.nvim_get_mode().mode
   ---@type string[]?
@@ -362,14 +360,10 @@ M.eval = function()
 
     lines = api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {})
   end
-  vim
-    .iter(lines)
-    :map(function(line) return line .. "\r" end)
-    :each(function(line) api.nvim_chan_send(term_channel, line) end)
+  assert(lines)
 
-  -- TODO: wait for response on https://github.com/PowerShell/PowerShellEditorServices/issues/2164
-  -- local client = assert(vim.lsp.get_client_by_id(client_id))
-  -- client:request("evaluate", { expression = text }, util.noop, 0)
+  local client = assert(vim.lsp.get_client_by_id(client_id))
+  client:request("evaluate", { expression = table.concat(lines, "\n") }, util.noop, 0)
 end
 
 return M
