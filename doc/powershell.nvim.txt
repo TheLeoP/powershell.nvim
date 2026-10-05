@@ -1,5 +1,5 @@
 *powershell.nvim.txt*
-                           For Neovim >= 0.10.0    Last change: 2026 August 10
+                          For Neovim >= 0.10.0    Last change: 2026 October 05
 
 ==============================================================================
 Table of Contents                          *powershell.nvim-table-of-contents*
@@ -155,7 +155,7 @@ To create a keymap only for powershell files, put the following in your config.
     -- this should go in `~/.config/nvim/ftplugin/ps1.lua` or inside a `FileType` autocmd
     -- IMPORTANT: don't forget to create the keymap with `expr = true` and return the result of `require('powershell').eval_operator()`
     vim.keymap.set({ "n", "x" }, "g=", function() return require("powershell").eval_operator() end, { expr = true })
-    
+
     -- to make `g==` operate in the current like just like builtin `dd` or `cc`
     vim.keymap.set({ "n" }, "g==", function() return require("powershell").eval_operator() .. "_" end, { expr = true })
 <
