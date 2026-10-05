@@ -36,7 +36,7 @@ local util = require "powershell.util"
 
 ---@class powershell.ScriptAnalysisSettings
 ---@field enable boolean?
----@field settingsPath string
+---@field settingsPath string?
 
 ---@class powershell.CodeFormattingSettings
 ---@field autoCorrectAliases boolean?
