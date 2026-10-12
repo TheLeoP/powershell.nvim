@@ -21,7 +21,6 @@ local function make_cmd(config)
     config.shell,
     "-NoLogo",
     "-NoProfile",
-    "-NonInteractive",
     "-File", file,
     "-HostName", "nvim",
     "-HostProfileId", "Neovim",
