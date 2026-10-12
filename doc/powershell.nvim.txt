@@ -1,5 +1,5 @@
 *powershell.nvim.txt*
-                          For Neovim >= 0.10.0    Last change: 2026 October 05
+                          For Neovim >= 0.10.0    Last change: 2026 October 12
 
 ==============================================================================
 Table of Contents                          *powershell.nvim-table-of-contents*
